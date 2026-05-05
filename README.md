@@ -18,9 +18,55 @@ All processing is local. No data leaves your machine.
 - Extracts token counts, messages, tool calls, and session metadata
 - Detects limit events via configurable text patterns and HTTP error codes
 - Deduplicates token counting across split API responses
+- Auto-ingests recently modified session files every 10 minutes when running `cua serve`
 
-### 📊 Multi-Format Reports
-- **Interactive HTML Dashboard** — live charts, date filters, per-project drill-down
+### 📊 Interactive Dashboard (`cua serve`)
+
+A multi-page local web dashboard served at `http://127.0.0.1:1974`:
+
+#### Main Dashboard (`/`)
+- Summary cards: projects, sessions, messages, tokens, limit events
+- Charts: usage over time, limit events per day, sessions per day — click any bar to drill into that day
+- Projects table with clickable rows to the project detail view
+- Recent sessions list with clickable rows to session detail
+- Limit events log with clickable rows to the session where the limit occurred
+- Date range filters with quick-select pills: Today, Yesterday, Last 2/5 days, Last week/2 weeks, Last/This month
+
+#### Project Detail (`/project`)
+- Same date filters scoped to a single project
+- Per-day usage charts and session list
+- Limit events log for that project
+
+#### Day View (`/day`)
+- Hour-by-hour activity breakdown (user messages, assistant messages, tool calls, tokens, limit events)
+- Click any hour bar or row to drill into 5-minute chunks for that hour
+- Sessions list with project dropdown filter, session ID text filter, and sortable columns
+- Limit events for that day
+- Auto-refresh every 10 minutes with manual "Refresh now" button that triggers a live ingest
+- Quick-nav pills: Today, Yesterday, 2 days ago
+
+#### Session Detail (`/session`)
+- Summary cards and metadata grid for the session
+- Per-minute activity timeline chart (stacked bar: user / assistant / tool)
+- Full event table: timestamp, role/type, tool name, character count, tokens
+- Limit events table with classification, pattern, confidence, and excerpt
+- Red banner and auto-scroll when limit events are present
+
+#### Sessions Browser (`/sessions`)
+- All sessions across all projects with server-side pagination
+- Sort by any column (started, duration, user msgs, tools, tokens, limits)
+- Text search filter (project path or session ID)
+- Date range filters
+- View modes: List (paginated) | 15-min chunks | 1-hour chunks
+
+### 📈 Navigation & Drill-Throughs
+- Every chart bar navigates to the corresponding day/hour view
+- Session rows link to the session detail page
+- Limit event rows link to the session detail, scrolled to the limit
+- All navigation preserves date filters and project context via URL parameters
+- Back links return you to the exact page you came from
+
+### 📤 Multi-Format Reports
 - **Static HTML Report** — self-contained with embedded CSS, JS, and JSON data
 - **CSV Export** — daily usage, sessions, limit events for analysis in spreadsheets
 - **JSON Export** — structured data for programmatic access
@@ -38,15 +84,15 @@ Automatically walk and analyse all Claude Code projects at once.
 ## Installation
 
 ### Requirements
-- Go 1.25 or later
-- macOS, Linux, or WSL (Unix-like environment for `lsof`)
+- Go 1.21 or later
+- macOS, Linux, or WSL
 
 ### Build from Source
 
 ```bash
 git clone https://github.com/seamus-waldron/ccan.git
 cd ccan
-go build ./cmd/cua
+go build -o cua ./cmd/cua
 ```
 
 Then use `./cua` (or `sudo mv cua /usr/local/bin/cua` to install system-wide).
@@ -69,7 +115,7 @@ Scans `~/.claude/projects/` and builds the database.
 ```bash
 cua serve
 ```
-Opens interactive dashboard at `http://127.0.0.1:1974`.
+Opens interactive dashboard at `http://127.0.0.1:1974`. The server auto-ingests new session data every 10 minutes and on every manual refresh — no need to re-run `scan-all`.
 
 ### 4. Generate Report
 ```bash
@@ -121,12 +167,13 @@ Automatically kills any existing `cua serve` process on the same port and rebind
 
 Access at: `http://127.0.0.1:1974`
 
-**Features:**
-- Summary cards (projects, sessions, messages, tokens, limits)
-- Charts: usage over time, limit events, sessions per day
-- Projects table with drill-down detail views
-- Sessions list and limit event log
-- Date range filters
+**Dashboard pages:**
+- `/` — Main dashboard with date filters and charts
+- `/project?id=<n>` — Project detail view
+- `/day?date=YYYY-MM-DD` — Day view with hourly breakdown
+- `/day?date=YYYY-MM-DD&hour=H` — Hour drill-through with 5-min chunks
+- `/session?id=<n>` — Session detail with full event timeline
+- `/sessions` — Full sessions browser with pagination
 
 ### `cua compare`
 Compare usage between two date ranges to detect restrictions.
@@ -232,6 +279,7 @@ limits:
 2. Extracts messages, tool calls, token usage, and metadata
 3. Detects limit events via pattern matching and HTTP error codes
 4. Deduplicates tokens (API responses split across multiple lines)
+5. Force-reparses files modified in the last 2 hours to catch in-progress sessions
 
 ### Token Counting
 - **Known tokens**: from `message.usage.input_tokens` + `output_tokens`
@@ -287,8 +335,8 @@ Contributions welcome! Areas for enhancement:
 - [ ] Time-series forecasting (predict when next limit will trigger)
 - [ ] Email alerts on high limit event frequency
 - [ ] Historical comparison (month-over-month trends)
-- [ ] Windows support (replace `lsof` with `netstat`)
-- [ ] Mobile-responsive dashboard improvements
+- [ ] Windows support
+- [ ] Model breakdown (usage per Claude model version)
 
 ## License
 

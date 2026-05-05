@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Claude Code Usage — Day View</title>
+<style>
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#f5f5f5;color:#222}
+header{background:#1a1a2e;color:#eee;padding:1rem 2rem;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.5rem}
+header h1{margin:0;font-size:1.4rem}
+header p{margin:.2rem 0 0;font-size:.85rem;opacity:.7}
+header a{color:#3b82f6;text-decoration:none;font-size:.85rem;white-space:nowrap}
+header a:hover{text-decoration:underline}
+.toolbar{background:#fff;border-bottom:1px solid #e5e5e5;padding:.6rem 2rem;display:flex;gap:1rem;align-items:center;flex-wrap:wrap}
+.toolbar label{font-size:.8rem;color:#555}
+.toolbar input[type=date]{border:1px solid #ccc;border-radius:4px;padding:.3rem .5rem;font-size:.8rem}
+.toolbar input[type=text]{border:1px solid #ccc;border-radius:4px;padding:.3rem .5rem;font-size:.8rem;min-width:180px}
+.toolbar select{border:1px solid #ccc;border-radius:4px;padding:.3rem .5rem;font-size:.8rem;background:#fff}
+.toolbar button{background:#3b82f6;color:#fff;border:none;border-radius:4px;padding:.35rem .9rem;font-size:.8rem;cursor:pointer}
+.toolbar button:hover{background:#2563eb}
+.live-dot{width:8px;height:8px;border-radius:50%;background:#10b981;display:inline-block;margin-right:.35rem;animation:pulse 1.5s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.live-dot.paused{background:#aaa;animation:none}
+.refresh-status{font-size:.78rem;color:#888}
+main{max-width:1350px;margin:1.5rem auto;padding:0 1.5rem}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:.75rem;margin-bottom:1.5rem}
+.card{background:#fff;border-radius:8px;padding:.9rem 1.1rem;box-shadow:0 1px 3px rgba(0,0,0,.1)}
+.card .label{font-size:.7rem;text-transform:uppercase;color:#888;margin-bottom:.25rem}
+.card .value{font-size:1.5rem;font-weight:700}
+.card.warn .value{color:#c0392b}
+.card .note{font-size:.65rem;color:#aaa;margin-top:.15rem}
+.section{background:#fff;border-radius:8px;padding:1.2rem 1.5rem;box-shadow:0 1px 3px rgba(0,0,0,.1);margin-bottom:1.5rem}
+.section h2{margin:0 0 .9rem;font-size:.95rem;color:#555;display:flex;align-items:center;gap:.5rem;flex-wrap:wrap}
+.section h2 .badge{font-size:.7rem;background:#e5e7eb;color:#555;padding:.1rem .45rem;border-radius:10px;font-weight:500}
+.chart-wrap{position:relative;height:220px;margin-bottom:.5rem}
+/* table base */
+table{width:100%;border-collapse:collapse;font-size:.8rem}
+th,td{padding:.45rem .6rem;text-align:left;border-bottom:1px solid #eee}
+th{background:#f9f9f9;font-weight:600;color:#555;white-space:nowrap;user-select:none}
+th.sortable{cursor:pointer}
+th.sortable:hover{background:#f0f0f0}
+th.sort-asc::after{content:' ▲';font-size:.6rem;opacity:.7}
+th.sort-desc::after{content:' ▼';font-size:.6rem;opacity:.7}
+tr[onclick]:hover td{background:#f0f7ff;cursor:pointer}
+/* hour rows */
+tr.hour-row td{font-size:.78rem}
+tr.hour-row.has-limit td{color:#c0392b;font-weight:500}
+tr.hour-row:hover td{background:#f0f7ff;cursor:pointer}
+/* tags */
+.tag{display:inline-block;padding:.1rem .4rem;border-radius:4px;font-size:.65rem;font-weight:600;text-transform:uppercase}
+.tag.hard_limit,.tag.quota_limit{background:#fde8e8;color:#c0392b}
+.tag.rate_limit{background:#fef3cd;color:#856404}
+.tag.temporary_capacity{background:#e2e8f0;color:#475569}
+.tag.unknown_limit{background:#f1f5f9;color:#64748b}
+.est{color:#aaa;font-style:italic}
+/* sessions filter bar */
+.filter-bar{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;margin-bottom:.75rem}
+.filter-bar input{border:1px solid #ccc;border-radius:4px;padding:.3rem .5rem;font-size:.8rem;min-width:200px}
+.filter-bar select{border:1px solid #ccc;border-radius:4px;padding:.3rem .5rem;font-size:.8rem;background:#fff}
+.filter-bar span{font-size:.78rem;color:#888;margin-left:auto}
+/* limit banner */
+.limit-banner{background:#fde8e8;border:1px solid #fca5a5;border-radius:6px;padding:.75rem 1rem;margin-bottom:1.5rem;font-size:.85rem;color:#991b1b;display:flex;align-items:center;gap:.75rem}
+.hour-drill-banner{background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;padding:.6rem 1rem;margin-bottom:1rem;font-size:.83rem;color:#1e40af;display:flex;align-items:center;gap:.75rem}
+.no-data{color:#aaa;font-size:.85rem;padding:1rem 0;text-align:center}
+footer{text-align:center;padding:1.5rem;font-size:.7rem;color:#bbb}
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1 id="pageTitle">Day View</h1>
+    <p id="headDate">Loading…</p>
+  </div>
+  <a id="backLink" href="/">← Back</a>
+</header>
+
+<div class="toolbar" id="dayToolbar">
+  <label>Date <input type="date" id="dateInput"></label>
+  <button onclick="goToDate()">Go</button>
+  <div style="display:flex;gap:.35rem;flex-wrap:wrap">
+    <button onclick="quickDay(0)" style="background:#e5e7eb;color:#222;font-size:.75rem;padding:.25rem .6rem">Today</button>
+    <button onclick="quickDay(-1)" style="background:#e5e7eb;color:#222;font-size:.75rem;padding:.25rem .6rem">Yesterday</button>
+    <button onclick="quickDay(-2)" style="background:#e5e7eb;color:#222;font-size:.75rem;padding:.25rem .6rem">2 days ago</button>
+  </div>
+  <div style="margin-left:auto;display:flex;align-items:center;gap:.75rem">
+    <label style="display:flex;align-items:center;gap:.35rem">
+      <span class="live-dot" id="liveDot"></span>
+      <select id="refreshInterval" onchange="setRefresh()">
+        <option value="0">Refresh: Off</option>
+        <option value="30">Every 30s</option>
+        <option value="60">Every 1m</option>
+        <option value="120">Every 2m</option>
+        <option value="300">Every 5m</option>
+        <option value="600" selected>Every 10m</option>
+      </select>
+    </label>
+    <span class="refresh-status" id="refreshStatus"></span>
+    <button onclick="manualRefresh()" style="background:#e5e7eb;color:#222" id="refreshBtn">↻ Refresh now</button>
+  </div>
+</div>
+
+<main>
+  <div id="limitBanner" style="display:none" class="limit-banner">⚠ <span id="limitBannerText"></span></div>
+  <div id="hourDrillBanner" style="display:none" class="hour-drill-banner">
+    🔍 Hour drill-through: <strong id="hourDrillLabel"></strong>
+    &nbsp;·&nbsp; <a id="backToDayLink" href="#" style="color:#1e40af">← Back to day view</a>
+  </div>
+
+  <div class="cards" id="cards">
+    <div class="card"><div class="label">Loading…</div><div class="value">—</div></div>
+  </div>
+
+  <div class="section">
+    <h2 id="activitySectionTitle">Activity by Hour <span style="font-size:.7rem;font-weight:400;color:#aaa;margin-left:.25rem">click a bar or row to drill into 5-min chunks</span></h2>
+    <div class="chart-wrap"><canvas id="chartHourly"></canvas></div>
+    <table>
+      <thead id="bucketTableHead"></thead>
+      <tbody id="hourlyBody"></tbody>
+    </table>
+  </div>
+
+  <div class="section">
+    <h2>Sessions <span class="badge" id="sessionCount">0</span></h2>
+    <div class="filter-bar">
+      <select id="sessProject" onchange="renderSessions()" style="max-width:280px">
+        <option value="">All projects</option>
+      </select>
+      <input type="text" id="sessSearch" placeholder="Filter by session ID…" oninput="renderSessions()">
+      <select id="sessSortCol" onchange="renderSessions()">
+        <option value="started_at">Sort: Started</option>
+        <option value="duration_seconds">Sort: Duration</option>
+        <option value="user_message_count">Sort: User msgs</option>
+        <option value="tool_call_count">Sort: Tools</option>
+        <option value="known_total_tokens">Sort: Tokens</option>
+        <option value="limit_event_count">Sort: Limits</option>
+      </select>
+      <select id="sessSortDir" onchange="renderSessions()">
+        <option value="asc">↑ Asc</option>
+        <option value="desc" selected>↓ Desc</option>
+      </select>
+      <span id="sessFilterStatus"></span>
+    </div>
+    <table>
+      <thead><tr>
+        <th onclick="sortSessions('started_at')">Started</th>
+        <th onclick="sortSessions('duration_seconds')">Duration</th>
+        <th onclick="sortSessions('user_message_count')">User</th>
+        <th onclick="sortSessions('assistant_message_count')">Asst</th>
+        <th onclick="sortSessions('tool_call_count')">Tools</th>
+        <th onclick="sortSessions('known_total_tokens')">Tokens</th>
+        <th onclick="sortSessions('limit_event_count')">Limits</th>
+        <th>Project</th>
+      </tr></thead>
+      <tbody id="sessionsBody"></tbody>
+    </table>
+  </div>
+
+  <div class="section" id="limitsSection">
+    <h2>Limit Events <span class="badge" id="limitCount">0</span></h2>
+    <div id="limitsBody"><div class="no-data">No limit events.</div></div>
+  </div>
+</main>
+<footer>Claude Code Usage Analyser &nbsp;·&nbsp; All processing is local. &nbsp;·&nbsp; Data reflects what has been ingested — run <code>cua serve</code> to keep live.</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<script>
+let countdownTimer=null;
+let chart=null;
+let allSessions=[];
+let sortCol='started_at', sortDir='desc';
+
+function qs(id){return document.getElementById(id)}
+function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+function fmtDur(s){if(!s)return'—';const m=Math.floor(s/60),sec=s%60;return m>0?m+'m '+sec+'s':sec+'s'}
+function fmtNum(n){return(n||0).toLocaleString()}
+function fmtTok(sr){
+  if(sr.known_total_tokens>0)return fmtNum(sr.known_total_tokens);
+  if(sr.estimated_total_tokens>0)return`<span class="est">~${fmtNum(sr.estimated_total_tokens)}</span>`;
+  return'—';
+}
+
+function getParams(){
+  const p=new URLSearchParams(window.location.search);
+  return{
+    date:p.get('date')||new Date().toISOString().split('T')[0],
+    projectId:p.get('project_id')||'',
+    hour:p.get('hour'),   // null = day view, '6' = hour drill
+    back:p.get('back')||'/',
+  };
+}
+
+function baseUrl(date){
+  const{projectId,back}=getParams();
+  let u='/day?date='+date;
+  if(projectId)u+='&project_id='+projectId;
+  u+='&back='+encodeURIComponent(back);
+  return u;
+}
+
+function hourUrl(h){
+  const{date,projectId,back}=getParams();
+  let u='/day?date='+date+'&hour='+h;
+  if(projectId)u+='&project_id='+projectId;
+  // back from hour view = the day view URL
+  const dayBack='/day?date='+date+(projectId?'&project_id='+projectId:'')+'&back='+encodeURIComponent(back);
+  u+='&back='+encodeURIComponent(dayBack);
+  return u;
+}
+
+function goToDate(){const d=qs('dateInput').value;if(d)window.location=baseUrl(d);}
+function quickDay(offset){
+  const d=new Date();d.setDate(d.getDate()+offset);
+  window.location=baseUrl(d.toISOString().split('T')[0]);
+}
+
+// ── refresh ──────────────────────────────────────────────────────────────────
+function startCountdown(){
+  clearInterval(countdownTimer);
+  const secs=parseInt(qs('refreshInterval').value);
+  if(secs===0){qs('liveDot').className='live-dot paused';qs('refreshStatus').textContent='';return;}
+  qs('liveDot').className='live-dot';
+  let rem=secs;
+  function fmt(s){return s>=60?Math.ceil(s/60)+'m':s+'s'}
+  qs('refreshStatus').textContent=`Next in ${fmt(rem)}`;
+  countdownTimer=setInterval(()=>{
+    rem--;
+    if(rem<=0){clearInterval(countdownTimer);ingestAndLoad().then(startCountdown);}
+    else qs('refreshStatus').textContent=`Next in ${fmt(rem)}`;
+  },1000);
+}
+function setRefresh(){startCountdown();}
+
+async function ingestAndLoad(){
+  const btn=qs('refreshBtn');
+  if(btn){btn.disabled=true;btn.textContent='Ingesting…';}
+  qs('refreshStatus').textContent='Ingesting…';
+  try{
+    await fetch('/api/ingest',{method:'POST'});
+  }catch(e){}
+  await load();
+  if(btn){btn.disabled=false;btn.textContent='↻ Refresh now';}
+}
+async function manualRefresh(){clearInterval(countdownTimer);await ingestAndLoad();startCountdown();}
+
+// ── data load ─────────────────────────────────────────────────────────────────
+async function load(){
+  const{date,projectId,hour,back}=getParams();
+  let url='/api/day?date='+date;
+  if(projectId)url+='&project_id='+projectId;
+  if(hour!==null)url+='&hour='+hour;
+  let data;
+  try{
+    const r=await fetch(url);
+    data=await r.json();
+  }catch(e){qs('refreshStatus').textContent='Load error: '+e.message;return;}
+
+  const isHourView=(data.hour>=0);
+  qs('dateInput').value=date;
+  qs('backLink').href=back;
+
+  // header
+  if(isHourView){
+    const hLabel=String(data.hour).padStart(2,'0')+':00–'+String(data.hour+1).padStart(2,'0')+':00';
+    qs('pageTitle').textContent='Hour View';
+    qs('headDate').textContent=date+' · '+hLabel;
+    qs('hourDrillBanner').style.display='';
+    qs('hourDrillLabel').textContent=hLabel+' on '+date;
+    // back to day view
+    const dayViewUrl='/day?date='+date+(projectId?'&project_id='+projectId:'')+'&back='+encodeURIComponent(back.includes('/day')?back:back);
+    qs('backToDayLink').href=dayViewUrl;
+    qs('activitySectionTitle').innerHTML='Activity by 5-Minute Chunk';
+    qs('dayToolbar').style.display='none';
+  }else{
+    qs('pageTitle').textContent='Day View'+(projectId?' · Project '+projectId:'');
+    qs('headDate').textContent=date;
+    qs('hourDrillBanner').style.display='none';
+    qs('activitySectionTitle').innerHTML='Activity by Hour <span style="font-size:.7rem;font-weight:400;color:#aaa;margin-left:.25rem">click a bar or row to drill into 5-min chunks</span>';
+    qs('dayToolbar').style.display='';
+  }
+
+  const hourly=data.hourly||[];
+  allSessions=data.sessions||[];
+  const limits=data.limit_events||[];
+  populateProjectDropdown(allSessions);
+
+  // cards
+  const totals=hourly.reduce((a,h)=>({
+    user:a.user+h.user_messages, asst:a.asst+h.assistant_messages,
+    tools:a.tools+h.tool_calls, known:a.known+h.known_tokens,
+    est:a.est+h.estimated_tokens, lim:a.lim+h.limit_events
+  }),{user:0,asst:0,tools:0,known:0,est:0,lim:0});
+  qs('cards').innerHTML=[
+    ['Sessions',allSessions.length,''],
+    ['User msgs',fmtNum(totals.user),''],
+    ['Asst msgs',fmtNum(totals.asst),''],
+    ['Tool calls',fmtNum(totals.tools),''],
+    ['Known tokens',fmtNum(totals.known),''],
+    ['Est. tokens',totals.est?`<span class="est">~${fmtNum(totals.est)}</span>`:'—','Estimated (chars/4)'],
+    ['Limit events',totals.lim,'',totals.lim>0?'warn':''],
+  ].map(([l,v,n,cls])=>`<div class="card ${cls||''}"><div class="label">${l}</div><div class="value">${v}</div>${n?`<div class="note">${n}</div>`:''}</div>`).join('');
+
+  // limit banner
+  if(limits.length>0){
+    qs('limitBanner').style.display='';
+    const byClass={};
+    limits.forEach(l=>{byClass[l.classification]=(byClass[l.classification]||0)+1});
+    qs('limitBannerText').textContent=`${limits.length} limit event${limits.length>1?'s':''}: `+Object.entries(byClass).map(([k,v])=>`${v}× ${k}`).join(', ');
+  }else{qs('limitBanner').style.display='none';}
+
+  renderBucketChart(hourly, limits, isHourView, data.hour);
+  renderBucketTable(hourly, limits, isHourView, data.hour);
+  renderSessions();
+  renderLimits(limits);
+}
+
+// ── bucket chart ──────────────────────────────────────────────────────────────
+function renderBucketChart(hourly, limits, isHourView, hourNum){
+  const canvas=qs('chartHourly');
+  if(!canvas)return;
+  if(chart){chart.destroy();chart=null;}
+  if(!hourly.length){canvas.style.display='none';return;}
+  canvas.style.display='';
+
+  function bucketLabel(h){
+    if(isHourView) return String(hourNum).padStart(2,'0')+':'+String(h).padStart(2,'0');
+    return String(h).padStart(2,'0')+':00';
+  }
+  const allBuckets=isHourView
+    ?[0,5,10,15,20,25,30,35,40,45,50,55]
+    :Array.from({length:24},(_,i)=>i);
+  const hmap={};
+  hourly.forEach(h=>hmap[h.hour]=h);
+  const limitBuckets=new Set();
+  limits.forEach(l=>{
+    if(!l.timestamp)return;
+    const ts=l.timestamp.replace(' ','T');
+    const d=new Date(ts);
+    if(isNaN(d))return;
+    const b=isHourView?Math.floor(d.getMinutes()/5)*5:d.getHours();
+    limitBuckets.add(b);
+  });
+  const labels=allBuckets.map(bucketLabel);
+  const activeIdx=allBuckets.filter(b=>hmap[b]).map(b=>allBuckets.indexOf(b));
+
+  chart=new Chart(canvas,{
+    type:'bar',
+    data:{
+      labels,
+      datasets:[
+        {label:'User msgs',data:allBuckets.map(b=>(hmap[b]||{}).user_messages||0),backgroundColor:'rgba(59,130,246,.75)',stack:'s'},
+        {label:'Asst msgs',data:allBuckets.map(b=>(hmap[b]||{}).assistant_messages||0),backgroundColor:'rgba(16,185,129,.75)',stack:'s'},
+        {label:'Tool calls',data:allBuckets.map(b=>(hmap[b]||{}).tool_calls||0),backgroundColor:'rgba(245,158,11,.75)',stack:'s'},
+      ]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{
+        legend:{position:'top'},
+        tooltip:{callbacks:{afterBody:(items)=>{
+          const b=allBuckets[items[0].dataIndex];
+          return limitBuckets.has(b)?['','⚠ Limit event(s)']:[];
+        }}}
+      },
+      scales:{x:{stacked:true},y:{stacked:true,beginAtZero:true,ticks:{precision:0}}},
+      onClick:(evt,elements)=>{
+        if(!elements.length)return;
+        const b=allBuckets[elements[0].dataIndex];
+        if(!isHourView)window.location=hourUrl(b);
+        else highlightBucketRow(b);
+      }
+    }
+  });
+
+  // Red overlay on limit buckets
+  if(limitBuckets.size>0){
+    const orig=chart.draw.bind(chart);
+    chart.draw=function(){
+      orig();
+      const ctx=canvas.getContext('2d');
+      const meta=chart.getDatasetMeta(0);
+      limitBuckets.forEach(b=>{
+        const idx=allBuckets.indexOf(b);
+        if(idx<0||!meta.data[idx])return;
+        const bar=meta.data[idx];
+        ctx.save();
+        ctx.fillStyle='rgba(220,38,38,.12)';
+        ctx.fillRect(bar.x-bar.width/2,chart.chartArea.top,bar.width,chart.chartArea.bottom-chart.chartArea.top);
+        ctx.strokeStyle='rgba(220,38,38,.4)';
+        ctx.lineWidth=1;
+        ctx.setLineDash([3,3]);
+        ctx.strokeRect(bar.x-bar.width/2,chart.chartArea.top,bar.width,chart.chartArea.bottom-chart.chartArea.top);
+        ctx.restore();
+      });
+    };
+    chart.draw();
+  }
+}
+
+function highlightBucketRow(bucket){
+  const rows=qs('hourlyBody').querySelectorAll('tr');
+  rows.forEach(r=>{
+    r.style.background=(parseInt(r.dataset.bucket)===bucket)?'#fff9c4':'';
+  });
+  const row=qs('hourlyBody').querySelector(`tr[data-bucket="${bucket}"]`);
+  if(row)row.scrollIntoView({behavior:'smooth',block:'center'});
+}
+
+// ── bucket table ──────────────────────────────────────────────────────────────
+function renderBucketTable(hourly, limits, isHourView, hourNum){
+  const hmap={};
+  hourly.forEach(h=>hmap[h.hour]=h);
+  const limitBuckets=new Set();
+  limits.forEach(l=>{
+    if(!l.timestamp)return;
+    const d=new Date(l.timestamp.replace(' ','T'));
+    if(isNaN(d))return;
+    limitBuckets.add(isHourView?Math.floor(d.getMinutes()/5)*5:d.getHours());
+  });
+
+  const allBuckets=isHourView
+    ?[0,5,10,15,20,25,30,35,40,45,50,55]
+    :Array.from({length:24},(_,i)=>i);
+
+  qs('bucketTableHead').innerHTML=`<tr>
+    <th>${isHourView?'Minute':'Hour'}</th>
+    <th>User msgs</th><th>Asst msgs</th><th>Tool calls</th>
+    <th>Known tokens</th><th>Est. tokens</th><th>Limit events</th>
+  </tr>`;
+
+  function label(b){
+    if(isHourView)return String(hourNum).padStart(2,'0')+':'+String(b).padStart(2,'0');
+    return String(b).padStart(2,'0')+':00';
+  }
+
+  const activeBuckets=allBuckets.filter(b=>hmap[b]||limitBuckets.has(b));
+  if(!activeBuckets.length){qs('hourlyBody').innerHTML='<tr><td colspan="7" class="no-data">No activity.</td></tr>';return;}
+
+  qs('hourlyBody').innerHTML=activeBuckets.map(b=>{
+    const r=hmap[b]||{};
+    const hasLim=limitBuckets.has(b);
+    const tok=r.known_tokens>0?fmtNum(r.known_tokens):'—';
+    const estTok=r.estimated_tokens>0?`<span class="est">~${fmtNum(r.estimated_tokens)}</span>`:'—';
+    const onclick=!isHourView?`onclick="window.location='${hourUrl(b)}'"` :`onclick="highlightBucketRow(${b})"`;
+    return`<tr class="hour-row${hasLim?' has-limit':''}" data-bucket="${b}" ${onclick}>
+      <td>${label(b)}</td>
+      <td>${r.user_messages||'—'}</td>
+      <td>${r.assistant_messages||'—'}</td>
+      <td>${r.tool_calls||'—'}</td>
+      <td>${tok}</td>
+      <td>${estTok}</td>
+      <td>${hasLim?`<span class="tag hard_limit">${(hmap[b]||{}).limit_events||'!'}</span>`:'—'}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ── sessions table ────────────────────────────────────────────────────────────
+function populateProjectDropdown(sessions){
+  const sel=qs('sessProject');
+  const prev=sel.value;
+  const paths=[...new Set(sessions.map(s=>s.project_path||'').filter(Boolean))].sort();
+  sel.innerHTML='<option value="">All projects</option>'+
+    paths.map(p=>`<option value="${esc(p)}"${p===prev?'selected':''}>${esc(p)}</option>`).join('');
+}
+
+function sortSessions(col){
+  if(sortCol===col)sortDir=sortDir==='asc'?'desc':'asc';
+  else{sortCol=col;sortDir='desc';}
+  qs('sessSortCol').value=col;
+  qs('sessSortDir').value=sortDir;
+  renderSessions();
+}
+
+function renderSessions(){
+  const search=(qs('sessSearch').value||'').toLowerCase();
+  const projFilter=(qs('sessProject').value||'');
+  sortCol=qs('sessSortCol').value;
+  sortDir=qs('sessSortDir').value;
+  const{back}=getParams();
+
+  let rows=allSessions.filter(s=>{
+    if(projFilter&&(s.project_path||'')!==projFilter)return false;
+    if(search&&!(s.session_id||'').toLowerCase().includes(search))return false;
+    return true;
+  });
+
+  rows=rows.slice().sort((a,b)=>{
+    let av=a[sortCol]||0, bv=b[sortCol]||0;
+    if(typeof av==='string')av=av.toLowerCase(),bv=(b[sortCol]||'').toLowerCase();
+    if(av<bv)return sortDir==='asc'?-1:1;
+    if(av>bv)return sortDir==='asc'?1:-1;
+    return 0;
+  });
+
+  qs('sessionCount').textContent=rows.length+(rows.length<allSessions.length?' / '+allSessions.length:'');
+  qs('sessFilterStatus').textContent=search?`${rows.length} of ${allSessions.length} shown`:'';
+
+  const dayBackUrl=encodeURIComponent(window.location.href);
+  qs('sessionsBody').innerHTML=rows.map(s=>`<tr onclick="window.location='/session?id=${s.id}&back=${dayBackUrl}'" style="cursor:pointer">
+    <td style="white-space:nowrap">${s.started_at?s.started_at.slice(11,19):'—'}</td>
+    <td>${fmtDur(s.duration_seconds)}</td>
+    <td>${s.user_message_count||0}</td>
+    <td>${s.assistant_message_count||0}</td>
+    <td>${s.tool_call_count||0}</td>
+    <td>${fmtTok(s)}</td>
+    <td>${s.limit_event_count>0?`<span class="tag hard_limit">${s.limit_event_count}</span>`:'—'}</td>
+    <td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.75rem;color:#555" title="${esc(s.project_path)}">${esc(s.project_path||'—')}</td>
+  </tr>`).join('')||'<tr><td colspan="8" class="no-data">No sessions.</td></tr>';
+}
+
+// ── limit events ──────────────────────────────────────────────────────────────
+function renderLimits(limits){
+  qs('limitCount').textContent=limits.length;
+  if(!limits.length){qs('limitsBody').innerHTML='<div class="no-data">No limit events.</div>';return;}
+  const dayBackUrl=encodeURIComponent(window.location.href);
+  qs('limitsBody').innerHTML=`<table><thead><tr>
+    <th>Time</th><th>Classification</th><th>Pattern</th><th>Confidence</th><th>Session</th><th>Excerpt</th>
+  </tr></thead><tbody>${limits.map(l=>`<tr style="${l.session_id?'cursor:pointer':''}" ${l.session_id?`onclick="window.location='/session?sid=${encodeURIComponent(l.session_id)}&highlight=limit&back=${dayBackUrl}'"`:''}>
+    <td style="white-space:nowrap">${l.timestamp?l.timestamp.slice(11,19):'—'}</td>
+    <td><span class="tag ${l.classification}">${l.classification}</span></td>
+    <td>${esc(l.matched_pattern)}</td>
+    <td>${(l.confidence*100).toFixed(0)}%</td>
+    <td style="font-size:.7rem;color:#888;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(l.session_id||'—')}</td>
+    <td style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(l.redacted_excerpt)}">${esc(l.redacted_excerpt)}</td>
+  </tr>`).join('')}</tbody></table>`;
+}
+
+// ── init ──────────────────────────────────────────────────────────────────────
+qs('dateInput').value=getParams().date;
+ingestAndLoad().then(startCountdown);
+</script>
+</body>
+</html>

@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Claude Code Usage — Sessions</title>
+<style>
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#f5f5f5;color:#222}
+header{background:#1a1a2e;color:#eee;padding:1rem 2rem;display:flex;justify-content:space-between;align-items:center}
+header h1{margin:0;font-size:1.4rem}
+header a{color:#3b82f6;text-decoration:none;font-size:.85rem}
+header a:hover{text-decoration:underline}
+.toolbar{background:#fff;border-bottom:1px solid #e5e5e5;padding:.6rem 1.5rem;display:flex;gap:.6rem;align-items:center;flex-wrap:wrap}
+.toolbar label{font-size:.8rem;color:#555;white-space:nowrap}
+.toolbar input,.toolbar select{border:1px solid #ccc;border-radius:4px;padding:.3rem .5rem;font-size:.8rem}
+.toolbar input[type=text]{min-width:220px}
+.toolbar button{background:#3b82f6;color:#fff;border:none;border-radius:4px;padding:.3rem .75rem;font-size:.8rem;cursor:pointer;white-space:nowrap}
+.toolbar button:hover{background:#2563eb}
+.pill{background:#e5e7eb;color:#222;font-size:.75rem;padding:.22rem .55rem;border-radius:4px;border:none;cursor:pointer}
+.pill:hover{background:#d1d5db}
+.pill.active{background:#3b82f6;color:#fff}
+.view-toggle{display:flex;gap:0;border:1px solid #ccc;border-radius:4px;overflow:hidden}
+.view-toggle button{background:#fff;color:#555;border:none;padding:.3rem .7rem;font-size:.8rem;cursor:pointer}
+.view-toggle button.active{background:#3b82f6;color:#fff}
+.view-toggle button:hover:not(.active){background:#f3f4f6}
+main{max-width:1500px;margin:1rem auto;padding:0 1.5rem}
+.status-bar{display:flex;align-items:center;gap:1rem;margin-bottom:.75rem;font-size:.8rem;color:#888}
+.status-bar strong{color:#222}
+table{width:100%;border-collapse:collapse;font-size:.8rem;background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.1)}
+th{background:#f9f9f9;font-weight:600;color:#555;padding:.5rem .65rem;text-align:left;border-bottom:2px solid #eee;white-space:nowrap;user-select:none}
+th.sortable{cursor:pointer}
+th.sortable:hover{background:#f0f0f0}
+th .sort-icon{margin-left:.25rem;opacity:.4;font-size:.7rem}
+th.sort-asc .sort-icon::after{content:'▲'}
+th.sort-desc .sort-icon::after{content:'▼'}
+th:not(.sort-asc):not(.sort-desc) .sort-icon::after{content:'⇅'}
+td{padding:.45rem .65rem;border-bottom:1px solid #f0f0f0;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr[onclick]:hover td{background:#f0f7ff;cursor:pointer}
+.tag{display:inline-block;padding:.1rem .4rem;border-radius:4px;font-size:.65rem;font-weight:600;text-transform:uppercase}
+.tag.hard_limit,.tag.quota_limit{background:#fde8e8;color:#c0392b}
+.tag.rate_limit{background:#fef3cd;color:#856404}
+.tag.temporary_capacity{background:#e2e8f0;color:#475569}
+.tag.unknown_limit{background:#f1f5f9;color:#64748b}
+.est{color:#aaa;font-style:italic}
+.project-cell{max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#3b82f6;font-size:.75rem}
+/* pagination */
+.pagination{display:flex;align-items:center;gap:.4rem;margin-top:.75rem;justify-content:center;flex-wrap:wrap}
+.pagination button{background:#fff;border:1px solid #ccc;border-radius:4px;padding:.3rem .65rem;font-size:.8rem;cursor:pointer}
+.pagination button:hover:not(:disabled){background:#f0f7ff;border-color:#3b82f6;color:#3b82f6}
+.pagination button.active{background:#3b82f6;color:#fff;border-color:#3b82f6}
+.pagination button:disabled{opacity:.4;cursor:default}
+/* chunk view */
+.chunk{background:#fff;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.1);margin-bottom:.75rem;overflow:hidden}
+.chunk-header{display:flex;align-items:center;gap:1.5rem;padding:.65rem 1rem;background:#f8fafc;border-bottom:1px solid #eee;cursor:pointer;user-select:none}
+.chunk-header:hover{background:#f0f7ff}
+.chunk-time{font-weight:600;font-size:.85rem;min-width:140px}
+.chunk-stat{font-size:.78rem;color:#666}
+.chunk-stat strong{color:#222}
+.chunk-sessions{display:none}
+.chunk-sessions.open{display:block}
+.chunk-has-limit .chunk-time{color:#c0392b}
+.no-data{text-align:center;color:#aaa;padding:2rem;font-size:.85rem}
+footer{text-align:center;padding:1.5rem;font-size:.7rem;color:#bbb}
+</style>
+</head>
+<body>
+<header>
+  <h1>Sessions Browser</h1>
+  <a href="/">← Dashboard</a>
+</header>
+
+<div class="toolbar">
+  <!-- date pills -->
+  <button class="pill" onclick="setPill('today')">Today</button>
+  <button class="pill" onclick="setPill('yesterday')">Yesterday</button>
+  <button class="pill" onclick="setPill('2days')">Last 2d</button>
+  <button class="pill" onclick="setPill('5days')">Last 5d</button>
+  <button class="pill" onclick="setPill('week')">Last 7d</button>
+  <button class="pill" onclick="setPill('2weeks')">Last 14d</button>
+  <button class="pill" onclick="setPill('month')">Last 30d</button>
+  <button class="pill" onclick="setPill('thismonth')">This month</button>
+  <label>From <input type="date" id="since"></label>
+  <label>To <input type="date" id="until"></label>
+  <!-- search -->
+  <input type="text" id="search" placeholder="Filter by project or session ID…" oninput="debounceSearch()">
+  <button onclick="applyFilters()">Apply</button>
+  <button onclick="clearAll()" style="background:#e5e7eb;color:#222">Clear</button>
+  <!-- view toggle -->
+  <div class="view-toggle" style="margin-left:auto">
+    <button id="vList" class="active" onclick="setView('list')">List</button>
+    <button id="v15" onclick="setView('15m')">15 min</button>
+    <button id="v1h" onclick="setView('1h')">1 hour</button>
+  </div>
+</div>
+
+<main>
+  <div class="status-bar">
+    <span id="statusText">Loading…</span>
+    <label style="margin-left:auto">Per page
+      <select id="perPage" onchange="applyFilters()">
+        <option value="50" selected>50</option>
+        <option value="100">100</option>
+        <option value="250">250</option>
+        <option value="500">500</option>
+      </select>
+    </label>
+  </div>
+
+  <div id="listView">
+    <table id="sessionTable">
+      <thead>
+        <tr>
+          <th class="sortable" data-col="started_at">Started <span class="sort-icon"></span></th>
+          <th class="sortable" data-col="duration_seconds">Duration <span class="sort-icon"></span></th>
+          <th class="sortable" data-col="user_message_count">User <span class="sort-icon"></span></th>
+          <th class="sortable" data-col="assistant_message_count">Asst <span class="sort-icon"></span></th>
+          <th class="sortable" data-col="tool_call_count">Tools <span class="sort-icon"></span></th>
+          <th class="sortable" data-col="known_total_tokens">Tokens <span class="sort-icon"></span></th>
+          <th class="sortable" data-col="limit_event_count">Limits <span class="sort-icon"></span></th>
+          <th>Project</th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+    <div class="pagination" id="pagination"></div>
+  </div>
+
+  <div id="chunkView" style="display:none">
+    <div id="chunks"></div>
+  </div>
+</main>
+
+<footer>Claude Code Usage Analyser &nbsp;·&nbsp; All processing is local.</footer>
+
+<script>
+let state={
+  since:'', until:'', search:'',
+  sortBy:'started_at', sortDir:'DESC',
+  page:0, perPage:50,
+  view:'list',
+  total:0, sessions:[],
+};
+let searchTimer=null;
+
+function qs(id){return document.getElementById(id)}
+function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+function fmtDur(s){if(!s)return'—';const m=Math.floor(s/60),sec=s%60;return m>0?m+'m '+sec+'s':sec+'s'}
+function fmtNum(n){return(n||0).toLocaleString()}
+function fmtTok(sr){
+  if(sr.known_total_tokens>0)return fmtNum(sr.known_total_tokens);
+  if(sr.estimated_total_tokens>0)return`<span class="est">~${fmtNum(sr.estimated_total_tokens)}</span>`;
+  return'—';
+}
+function fmtTime(s){return s?s.slice(0,19).replace('T',' '):'—'}
+function fmtShortTime(s){return s?s.slice(11,19):'—'}
+
+// ── date pills ──
+function todayStr(){return new Date().toISOString().split('T')[0]}
+function offsetDay(n){const d=new Date();d.setDate(d.getDate()+n);return d.toISOString().split('T')[0]}
+function setPill(range){
+  const today=todayStr();
+  let since, until=today;
+  switch(range){
+    case'today':since=today;break;
+    case'yesterday':since=until=offsetDay(-1);break;
+    case'2days':since=offsetDay(-1);break;
+    case'5days':since=offsetDay(-4);break;
+    case'week':since=offsetDay(-6);break;
+    case'2weeks':since=offsetDay(-13);break;
+    case'month':since=offsetDay(-29);break;
+    case'thismonth':since=new Date(new Date().getFullYear(),new Date().getMonth(),1).toISOString().split('T')[0];break;
+  }
+  qs('since').value=since;
+  qs('until').value=until;
+  applyFilters();
+}
+
+function applyFilters(){
+  state.since=qs('since').value;
+  state.until=qs('until').value;
+  state.search=qs('search').value.trim();
+  state.perPage=parseInt(qs('perPage').value)||50;
+  state.page=0;
+  load();
+}
+function clearAll(){qs('since').value='';qs('until').value='';qs('search').value='';applyFilters();}
+function debounceSearch(){clearTimeout(searchTimer);searchTimer=setTimeout(applyFilters,400);}
+
+// ── sort ──
+function setSort(col){
+  if(state.sortBy===col){state.sortDir=state.sortDir==='DESC'?'ASC':'DESC';}
+  else{state.sortBy=col;state.sortDir='DESC';}
+  state.page=0;
+  load();
+}
+document.querySelectorAll('th.sortable').forEach(th=>{
+  th.addEventListener('click',()=>setSort(th.dataset.col));
+});
+
+function updateSortHeaders(){
+  document.querySelectorAll('th.sortable').forEach(th=>{
+    th.classList.remove('sort-asc','sort-desc');
+    if(th.dataset.col===state.sortBy){
+      th.classList.add(state.sortDir==='ASC'?'sort-asc':'sort-desc');
+    }
+  });
+}
+
+// ── view mode ──
+function setView(v){
+  state.view=v;
+  qs('vList').classList.toggle('active',v==='list');
+  qs('v15').classList.toggle('active',v==='15m');
+  qs('v1h').classList.toggle('active',v==='1h');
+  qs('listView').style.display=v==='list'?'':'none';
+  qs('chunkView').style.display=v!=='list'?'':'none';
+  if(v!=='list'){loadChunks();}else{load();}
+}
+
+// ── list view load ──
+async function load(){
+  qs('statusText').textContent='Loading…';
+  const p=new URLSearchParams();
+  if(state.since)p.set('since',state.since);
+  if(state.until)p.set('until',state.until);
+  if(state.search)p.set('search',state.search);
+  p.set('sort_by',state.sortBy);
+  p.set('sort_dir',state.sortDir);
+  p.set('limit',state.perPage);
+  p.set('offset',state.page*state.perPage);
+  const r=await fetch('/api/sessions?'+p);
+  const data=await r.json();
+  state.total=data.total||0;
+  state.sessions=data.sessions||[];
+  renderList();
+  updateSortHeaders();
+}
+
+function renderList(){
+  const sessions=state.sessions;
+  const total=state.total;
+  const pages=Math.ceil(total/state.perPage);
+  const from=state.page*state.perPage+1;
+  const to=Math.min(from+state.perPage-1,total);
+  qs('statusText').innerHTML=`Showing <strong>${from}–${to}</strong> of <strong>${fmtNum(total)}</strong> sessions`;
+
+  const sessionsBackUrl=encodeURIComponent(window.location.href);
+  qs('tbody').innerHTML=sessions.map(s=>`<tr onclick="window.location='/session?id=${s.id}&back=${sessionsBackUrl}'">
+    <td style="white-space:nowrap">${fmtTime(s.started_at)}</td>
+    <td>${fmtDur(s.duration_seconds)}</td>
+    <td>${s.user_message_count||0}</td>
+    <td>${s.assistant_message_count||0}</td>
+    <td>${s.tool_call_count||0}</td>
+    <td>${fmtTok(s)}</td>
+    <td>${s.limit_event_count>0?`<span class="tag hard_limit">${s.limit_event_count}</span>`:'—'}</td>
+    <td class="project-cell" title="${esc(s.project_path)}">${esc(s.project_path||'—')}</td>
+  </tr>`).join('')||`<tr><td colspan="8" class="no-data">No sessions found.</td></tr>`;
+
+  // pagination
+  const pg=qs('pagination');
+  if(pages<=1){pg.innerHTML='';return;}
+  let html='';
+  html+=`<button ${state.page===0?'disabled':''} onclick="goPage(0)">«</button>`;
+  html+=`<button ${state.page===0?'disabled':''} onclick="goPage(${state.page-1})">‹</button>`;
+  const start=Math.max(0,state.page-3);
+  const end=Math.min(pages-1,state.page+3);
+  if(start>0)html+=`<button onclick="goPage(0)">1</button>${start>1?'<span style="padding:0 .25rem;color:#aaa">…</span>':''}`;
+  for(let i=start;i<=end;i++){
+    html+=`<button class="${i===state.page?'active':''}" onclick="goPage(${i})">${i+1}</button>`;
+  }
+  if(end<pages-1)html+=`${end<pages-2?'<span style="padding:0 .25rem;color:#aaa">…</span>':''}<button onclick="goPage(${pages-1})">${pages}</button>`;
+  html+=`<button ${state.page>=pages-1?'disabled':''} onclick="goPage(${state.page+1})">›</button>`;
+  html+=`<button ${state.page>=pages-1?'disabled':''} onclick="goPage(${pages-1})">»</button>`;
+  pg.innerHTML=html;
+}
+
+function goPage(p){state.page=p;load();}
+
+// ── chunk view load ──
+async function loadChunks(){
+  qs('statusText').textContent='Loading…';
+  // fetch up to 5000 sessions for the selected range (chunk view is best for focused ranges)
+  const p=new URLSearchParams();
+  if(state.since)p.set('since',state.since);
+  if(state.until)p.set('until',state.until);
+  if(state.search)p.set('search',state.search);
+  p.set('sort_by','started_at');
+  p.set('sort_dir','ASC');
+  p.set('limit','5000');
+  p.set('offset','0');
+  const r=await fetch('/api/sessions?'+p);
+  const data=await r.json();
+  const sessions=data.sessions||[];
+  qs('statusText').innerHTML=`<strong>${fmtNum(data.total||0)}</strong> sessions (showing up to 5,000 in chunk view — narrow your date range for full coverage)`;
+  renderChunks(sessions);
+}
+
+function bucketKey(ts, intervalMins){
+  if(!ts)return'unknown';
+  const d=new Date(ts.replace(' ','T'));
+  if(isNaN(d))return'unknown';
+  const mins=d.getHours()*60+d.getMinutes();
+  const bucket=Math.floor(mins/intervalMins)*intervalMins;
+  const bh=Math.floor(bucket/60).toString().padStart(2,'0');
+  const bm=(bucket%60).toString().padStart(2,'0');
+  return d.toISOString().split('T')[0]+'T'+bh+':'+bm;
+}
+
+function fmtBucketLabel(key, intervalMins){
+  if(key==='unknown')return'Unknown time';
+  const d=new Date(key);
+  const date=d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
+  const start=key.slice(11,16);
+  if(intervalMins>=60){
+    const endH=(d.getHours()+intervalMins/60)%24;
+    const endStr=endH.toString().padStart(2,'0')+':00';
+    return`${date} · ${start}–${endStr}`;
+  }
+  const endMin=new Date(d.getTime()+intervalMins*60000);
+  const endStr=endMin.getHours().toString().padStart(2,'0')+':'+endMin.getMinutes().toString().padStart(2,'0');
+  return`${date} · ${start}–${endStr}`;
+}
+
+function renderChunks(sessions){
+  const intervalMins=state.view==='15m'?15:60;
+  const buckets=new Map();
+  for(const s of sessions){
+    const key=bucketKey(s.started_at,intervalMins);
+    if(!buckets.has(key))buckets.set(key,{key,sessions:[],userMsgs:0,asstMsgs:0,tools:0,knownTok:0,estTok:0,limits:0});
+    const b=buckets.get(key);
+    b.sessions.push(s);
+    b.userMsgs+=s.user_message_count||0;
+    b.asstMsgs+=s.assistant_message_count||0;
+    b.tools+=s.tool_call_count||0;
+    b.knownTok+=s.known_total_tokens||0;
+    b.estTok+=s.estimated_total_tokens||0;
+    b.limits+=s.limit_event_count||0;
+  }
+
+  const sorted=[...buckets.values()].sort((a,b)=>a.key<b.key?-1:1);
+  const container=qs('chunks');
+  if(!sorted.length){container.innerHTML=`<div class="no-data">No sessions in this range.</div>`;return;}
+
+  container.innerHTML=sorted.map((b,bi)=>{
+    const hasLimit=b.limits>0;
+    const tok=b.knownTok>0?fmtNum(b.knownTok):(b.estTok>0?`~${fmtNum(b.estTok)}`:'—');
+    const chunkBack=encodeURIComponent(window.location.href);
+    const rows=b.sessions.map(s=>`<tr onclick="window.location='/session?id=${s.id}&back=${chunkBack}'">
+      <td style="white-space:nowrap;padding-left:2rem">${fmtShortTime(s.started_at)}</td>
+      <td>${fmtDur(s.duration_seconds)}</td>
+      <td>${s.user_message_count||0}</td>
+      <td>${s.assistant_message_count||0}</td>
+      <td>${s.tool_call_count||0}</td>
+      <td>${fmtTok(s)}</td>
+      <td>${s.limit_event_count>0?`<span class="tag hard_limit">${s.limit_event_count}</span>`:'—'}</td>
+      <td class="project-cell" title="${esc(s.project_path)}">${esc(s.project_path||'—')}</td>
+    </tr>`).join('');
+
+    return`<div class="chunk">
+      <div class="chunk-header ${hasLimit?'chunk-has-limit':''}" onclick="toggleChunk(${bi})">
+        <span class="chunk-time">${fmtBucketLabel(b.key,intervalMins)}</span>
+        <span class="chunk-stat"><strong>${b.sessions.length}</strong> session${b.sessions.length>1?'s':''}</span>
+        <span class="chunk-stat">User <strong>${fmtNum(b.userMsgs)}</strong></span>
+        <span class="chunk-stat">Asst <strong>${fmtNum(b.asstMsgs)}</strong></span>
+        <span class="chunk-stat">Tools <strong>${fmtNum(b.tools)}</strong></span>
+        <span class="chunk-stat">Tokens <strong>${tok}</strong></span>
+        ${hasLimit?`<span class="chunk-stat" style="color:#c0392b">⚠ <strong>${b.limits}</strong> limit${b.limits>1?'s':''}</span>`:''}
+        <span style="margin-left:auto;color:#aaa;font-size:.75rem" id="chevron${bi}">▶</span>
+      </div>
+      <div class="chunk-sessions" id="chunk${bi}">
+        <table style="margin:0;border-radius:0;box-shadow:none">
+          <thead><tr>
+            <th>Started</th><th>Duration</th><th>User</th><th>Asst</th><th>Tools</th><th>Tokens</th><th>Limits</th><th>Project</th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleChunk(i){
+  const el=qs('chunk'+i);
+  const ch=qs('chevron'+i);
+  const open=el.classList.toggle('open');
+  if(ch)ch.textContent=open?'▼':'▶';
+}
+
+// ── init ──
+// read any URL params
+(function(){
+  const p=new URLSearchParams(window.location.search);
+  if(p.get('since')){qs('since').value=p.get('since');state.since=p.get('since');}
+  if(p.get('until')){qs('until').value=p.get('until');state.until=p.get('until');}
+  if(p.get('search')){qs('search').value=p.get('search');state.search=p.get('search');}
+  load();
+})();
+</script>
+</body>
+</html>

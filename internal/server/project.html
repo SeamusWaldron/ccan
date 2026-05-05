@@ -33,6 +33,7 @@ main{max-width:1400px;margin:1.5rem auto;padding:0 1.5rem}
 table{width:100%;border-collapse:collapse;font-size:.8rem}
 th,td{padding:.5rem .6rem;text-align:left;border-bottom:1px solid #eee}
 th{background:#f9f9f9;font-weight:600;color:#555}
+tr[onclick]:hover td{background:#f0f7ff}
 .tag{display:inline-block;padding:.1rem .4rem;border-radius:4px;font-size:.65rem;font-weight:600;text-transform:uppercase}
 .tag.hard_limit{background:#fde8e8;color:#c0392b}
 .tag.rate_limit{background:#fef3cd;color:#856404}
@@ -52,7 +53,23 @@ footer{text-align:center;padding:1.5rem;font-size:.7rem;color:#bbb}
   <a href="/">← Back to Dashboard</a>
 </header>
 <div class="toolbar">
-  <span id="status" style="font-size:.8rem;color:#888">Loading…</span>
+  <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+    <button onclick="setPill('today')" style="background:#e5e7eb;color:#222;font-size:.75rem;padding:.25rem .6rem">Today</button>
+    <button onclick="setPill('yesterday')" style="background:#e5e7eb;color:#222;font-size:.75rem;padding:.25rem .6rem">Yesterday</button>
+    <button onclick="setPill('2days')" style="background:#e5e7eb;color:#222;font-size:.75rem;padding:.25rem .6rem">Last 2 days</button>
+    <button onclick="setPill('5days')" style="background:#e5e7eb;color:#222;font-size:.75rem;padding:.25rem .6rem">Last 5 days</button>
+    <button onclick="setPill('week')" style="background:#e5e7eb;color:#222;font-size:.75rem;padding:.25rem .6rem">Last week</button>
+    <button onclick="setPill('2weeks')" style="background:#e5e7eb;color:#222;font-size:.75rem;padding:.25rem .6rem">Last 2 weeks</button>
+    <button onclick="setPill('month')" style="background:#e5e7eb;color:#222;font-size:.75rem;padding:.25rem .6rem">Last month</button>
+    <button onclick="setPill('thismonth')" style="background:#e5e7eb;color:#222;font-size:.75rem;padding:.25rem .6rem">This month</button>
+  </div>
+  <div style="display:flex;gap:.5rem;align-items:center;margin-top:.5rem">
+    <label>From <input type="date" id="since"></label>
+    <label>To <input type="date" id="until"></label>
+    <button onclick="reload()">Apply</button>
+    <button onclick="clearFilters()">Clear</button>
+    <span id="status" style="font-size:.8rem;color:#888"></span>
+  </div>
 </div>
 <main>
   <div class="cards" id="cards">
@@ -108,9 +125,51 @@ function getProjectID(){
   return p.get('id');
 }
 
+function dateParams(){
+  const s=qs('since').value,u=qs('until').value;
+  const p=new URLSearchParams;
+  if(s)p.set('since',s);
+  if(u)p.set('until',u);
+  return p.toString()?'?'+p:'';
+}
+
 async function api(path){
-  const r=await fetch(path);
+  const r=await fetch(path+dateParams());
   return r.json();
+}
+
+function clearFilters(){qs('since').value='';qs('until').value='';reload()}
+
+function setPill(range){
+  const today=new Date();
+  let since,until=today.toISOString().split('T')[0];
+  switch(range){
+    case'today':
+      since=until;break;
+    case'yesterday':
+      const yesterday=new Date(today);yesterday.setDate(yesterday.getDate()-1);
+      since=until=yesterday.toISOString().split('T')[0];break;
+    case'2days':
+      const d2=new Date(today);d2.setDate(d2.getDate()-1);
+      since=d2.toISOString().split('T')[0];break;
+    case'5days':
+      const d5=new Date(today);d5.setDate(d5.getDate()-4);
+      since=d5.toISOString().split('T')[0];break;
+    case'week':
+      const dw=new Date(today);dw.setDate(dw.getDate()-6);
+      since=dw.toISOString().split('T')[0];break;
+    case'2weeks':
+      const d2w=new Date(today);d2w.setDate(d2w.getDate()-13);
+      since=d2w.toISOString().split('T')[0];break;
+    case'month':
+      const dm=new Date(today);dm.setDate(dm.getDate()-29);
+      since=dm.toISOString().split('T')[0];break;
+    case'thismonth':
+      since=new Date(today.getFullYear(),today.getMonth(),1).toISOString().split('T')[0];break;
+  }
+  qs('since').value=since;
+  qs('until').value=until;
+  reload();
 }
 
 async function reload(){
@@ -164,7 +223,16 @@ function renderCharts(daily){
     if(!canvas)return;
     const existing=Chart.getChart(canvas);
     if(existing)existing.destroy();
-    return new Chart(canvas,{type,data:{labels,datasets},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{position:'top'}},scales:{y:{beginAtZero:true}},...opts}});
+    const chartOpts={responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{position:'top'},tooltip:{callbacks:{footer:()=>['Click to open day view']}}},scales:{y:{beginAtZero:true}},...opts,onClick:(evt,elements)=>{
+      if(elements.length>0){
+        const idx=elements[0].index;
+        const date=labels[idx];
+        const projID=getProjectID();
+        const back=encodeURIComponent(window.location.href);
+        window.location='/day?date='+date+(projID?'&project_id='+projID:'')+'&back='+back;
+      }
+    }};
+    return new Chart(canvas,{type,data:{labels,datasets},options:chartOpts});
   }
   mk('chartUsage','line',[
     {label:'User messages',data:daily.map(r=>r.user_message_count),borderColor:'#3b82f6',backgroundColor:'rgba(59,130,246,.08)',tension:.3,fill:true},
@@ -178,7 +246,7 @@ function renderCharts(daily){
 function renderSessions(sessions){
   const tb=qs('sessionsBody');
   if(!tb)return;
-  tb.innerHTML=(sessions||[]).map(s=>`<tr>
+  tb.innerHTML=(sessions||[]).map(s=>`<tr style="cursor:pointer" onclick="window.location='/session?id=${s.id}&back='+encodeURIComponent(window.location.href)">
     <td>${s.started_at?s.started_at.slice(0,19).replace('T',' '):'—'}</td>
     <td>${fmtDur(s.duration_seconds)}</td>
     <td>${s.user_message_count}</td><td>${s.assistant_message_count}</td>
@@ -190,7 +258,8 @@ function renderSessions(sessions){
 function renderLimits(limits){
   const tb=qs('limitsBody');
   if(!tb)return;
-  tb.innerHTML=(limits||[]).map(l=>`<tr>
+  const projBackUrl=encodeURIComponent(window.location.href);
+  tb.innerHTML=(limits||[]).map(l=>`<tr style="${l.session_id?'cursor:pointer':''}" ${l.session_id?`onclick="window.location='/session?sid=${encodeURIComponent(l.session_id)}&highlight=limit&back=${projBackUrl}'"`:''}>
     <td>${l.timestamp?l.timestamp.slice(0,19).replace('T',' '):'—'}</td>
     <td><span class="tag ${l.classification}">${l.classification}</span></td>
     <td>${esc(l.matched_pattern)}</td>
@@ -199,7 +268,15 @@ function renderLimits(limits){
   </tr>`).join('')||'<tr><td colspan="5" style="color:#aaa">No limit events detected.</td></tr>';
 }
 
-reload();
+function init(){
+  const p=new URLSearchParams(window.location.search);
+  const since=p.get('since');
+  const until=p.get('until');
+  if(since)qs('since').value=since;
+  if(until)qs('until').value=until;
+  reload();
+}
+init();
 </script>
 </body>
 </html>

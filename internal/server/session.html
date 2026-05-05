@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Claude Code Usage — Session Detail</title>
+<style>
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#f5f5f5;color:#222}
+header{background:#1a1a2e;color:#eee;padding:1rem 2rem;display:flex;justify-content:space-between;align-items:flex-start}
+header>div:first-child{flex:1}
+header h1{margin:0;font-size:1.4rem}
+header p{margin:.25rem 0 0;font-size:.85rem;opacity:.7}
+header>a{color:#3b82f6;text-decoration:none;padding:.5rem 1rem;font-size:.85rem;white-space:nowrap;align-self:center}
+header>a:hover{text-decoration:underline}
+main{max-width:1200px;margin:1.5rem auto;padding:0 1.5rem}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:.75rem;margin-bottom:1.5rem}
+.card{background:#fff;border-radius:8px;padding:1rem 1.25rem;box-shadow:0 1px 3px rgba(0,0,0,.1)}
+.card .label{font-size:.7rem;text-transform:uppercase;color:#888;margin-bottom:.3rem}
+.card .value{font-size:1.4rem;font-weight:700}
+.card.warn .value{color:#c0392b}
+.card .note{font-size:.65rem;color:#aaa;margin-top:.2rem}
+.section{background:#fff;border-radius:8px;padding:1.25rem 1.5rem;box-shadow:0 1px 3px rgba(0,0,0,.1);margin-bottom:1.5rem}
+.section h2{margin:0 0 1rem;font-size:.95rem;color:#555;display:flex;align-items:center;gap:.5rem}
+.section h2 .badge{font-size:.7rem;background:#e5e7eb;color:#555;padding:.1rem .45rem;border-radius:10px;font-weight:500}
+table{width:100%;border-collapse:collapse;font-size:.8rem}
+th,td{padding:.45rem .6rem;text-align:left;border-bottom:1px solid #eee}
+th{background:#f9f9f9;font-weight:600;color:#555;white-space:nowrap}
+.tag{display:inline-block;padding:.1rem .4rem;border-radius:4px;font-size:.65rem;font-weight:600;text-transform:uppercase}
+.tag.hard_limit{background:#fde8e8;color:#c0392b}
+.tag.rate_limit{background:#fef3cd;color:#856404}
+.tag.quota_limit{background:#fde8e8;color:#c0392b}
+.tag.temporary_capacity{background:#e2e8f0;color:#475569}
+.tag.unknown_limit{background:#f1f5f9;color:#64748b}
+.tag.user{background:#dbeafe;color:#1d4ed8}
+.tag.assistant{background:#d1fae5;color:#065f46}
+.tag.tool_call{background:#fef3cd;color:#92400e}
+.tag.tool_result{background:#ede9fe;color:#5b21b6}
+.tag.system{background:#f1f5f9;color:#475569}
+.est{color:#aaa;font-style:italic}
+.limit-banner{background:#fde8e8;border:1px solid #fca5a5;border-radius:6px;padding:.75rem 1rem;margin-bottom:1.5rem;font-size:.85rem;color:#991b1b}
+.limit-banner strong{display:block;margin-bottom:.25rem}
+.meta-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:.5rem 1.5rem;font-size:.85rem;margin-bottom:1.5rem}
+.meta-grid dt{color:#888;font-size:.75rem;text-transform:uppercase;margin-bottom:.1rem}
+.meta-grid dd{margin:0 0 .75rem;font-weight:500;word-break:break-all}
+.chart-wrap{position:relative;height:200px;margin-bottom:1rem}
+footer{text-align:center;padding:1.5rem;font-size:.7rem;color:#bbb}
+.highlight-row td{background:#fff9c4!important}
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>Session Detail</h1>
+    <p id="sessionMeta">Loading…</p>
+  </div>
+  <a id="backLink" href="/">← Back</a>
+</header>
+<main>
+  <div id="limitBanner" style="display:none" class="limit-banner">
+    <strong>⚠ Limit events occurred during this session</strong>
+    <span id="limitBannerDetail"></span>
+  </div>
+
+  <div class="cards" id="cards">
+    <div class="card"><div class="label">Loading…</div><div class="value">—</div></div>
+  </div>
+
+  <div class="section">
+    <h2>Session Info</h2>
+    <dl class="meta-grid" id="metaGrid"></dl>
+  </div>
+
+  <div class="section">
+    <h2>Activity Timeline <span class="badge" id="eventCount">0</span></h2>
+    <div class="chart-wrap"><canvas id="chartActivity"></canvas></div>
+    <table>
+      <thead><tr><th>#</th><th>Timestamp</th><th>Role / Type</th><th>Tool</th><th>Chars</th><th>Tokens</th></tr></thead>
+      <tbody id="eventsBody"></tbody>
+    </table>
+  </div>
+
+  <div class="section" id="limitsSection" style="display:none">
+    <h2>Limit Events <span class="badge" id="limitCount">0</span></h2>
+    <table>
+      <thead><tr><th>Timestamp</th><th>Classification</th><th>Pattern</th><th>Confidence</th><th>Excerpt</th></tr></thead>
+      <tbody id="limitsBody"></tbody>
+    </table>
+  </div>
+</main>
+<footer>Claude Code Usage Analyser &nbsp;·&nbsp; All processing is local.</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<script>
+function qs(id){return document.getElementById(id)}
+function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+function fmtDur(s){if(!s)return'—';const m=Math.floor(s/60),sec=s%60;return m>0?m+'m '+sec+'s':sec+'s'}
+function fmtNum(n){return(n||0).toLocaleString()}
+
+function getParams(){
+  const p=new URLSearchParams(window.location.search);
+  return{id:p.get('id'),sid:p.get('sid'),highlight:p.get('highlight'),back:p.get('back')};
+}
+
+async function load(){
+  const{id,sid,highlight,back}=getParams();
+  const qs2=id?`?id=${id}`:`?sid=${encodeURIComponent(sid||'')}`;
+  let data;
+  try{
+    const r=await fetch('/api/session'+qs2);
+    data=await r.json();
+  }catch(e){
+    qs('sessionMeta').textContent='Error loading session: '+e.message;
+    return;
+  }
+  if(!data||!data.session){
+    qs('sessionMeta').textContent='Session not found.';
+    return;
+  }
+
+  const sess=data.session;
+  const events=data.events||[];
+  const limits=data.limit_events||[];
+
+  // Back link — use explicit back param if present, otherwise fall back to project page
+  qs('backLink').href=back||(sess.project_id?`/project?id=${sess.project_id}`:`/`);
+
+  qs('sessionMeta').textContent=`Started: ${sess.started_at?sess.started_at.slice(0,19).replace('T',' '):'unknown'} · Duration: ${fmtDur(sess.duration_seconds)}`;
+
+  // Cards
+  qs('cards').innerHTML=[
+    ['User messages',sess.user_message_count,''],
+    ['Asst messages',sess.assistant_message_count,''],
+    ['Tool calls',sess.tool_call_count,''],
+    ['Known tokens',fmtNum(sess.known_total_tokens),''],
+    ['Est. tokens',sess.estimated_total_tokens?`<span class="est">~${fmtNum(sess.estimated_total_tokens)}</span>`:'—','Estimated (chars/4)'],
+    ['Duration',fmtDur(sess.duration_seconds),''],
+    ['Limit events',sess.limit_event_count,'',sess.limit_event_count>0?'warn':''],
+  ].map(([l,v,n,cls])=>`<div class="card ${cls||''}"><div class="label">${l}</div><div class="value">${v}</div>${n?`<div class="note">${n}</div>`:''}</div>`).join('');
+
+  // Meta grid
+  qs('metaGrid').innerHTML=[
+    ['Session ID', esc(sess.session_id||'—')],
+    ['Started', sess.started_at?sess.started_at.slice(0,19).replace('T',' '):'—'],
+    ['Ended', sess.ended_at?sess.ended_at.slice(0,19).replace('T',' '):'—'],
+    ['Duration', fmtDur(sess.duration_seconds)],
+    ['Known tokens (in/out)', sess.known_total_tokens>0?`${fmtNum(sess.known_input_tokens||0)} / ${fmtNum(sess.known_output_tokens||0)}`:'—'],
+    ['Ended after limit', sess.ended_after_limit_event?'Yes':'No'],
+    ['First limit at', sess.first_limit_event_at?sess.first_limit_event_at.slice(0,19).replace('T',' '):'—'],
+  ].map(([k,v])=>`<div><dt>${k}</dt><dd>${v}</dd></div>`).join('');
+
+  // Limit banner
+  if(limits.length>0){
+    qs('limitBanner').style.display='';
+    qs('limitBannerDetail').textContent=`${limits.length} limit event${limits.length>1?'s':''} detected. First at ${limits[0].timestamp?limits[0].timestamp.slice(0,19).replace('T',' '):'unknown'}.`;
+  }
+
+  // Activity chart — group events by minute
+  renderActivityChart(events, limits);
+
+  // Events table
+  qs('eventCount').textContent=events.length;
+  const limitTimestamps=new Set(limits.map(l=>l.timestamp));
+  qs('eventsBody').innerHTML=events.map((ev,i)=>{
+    const isLimitTime=limitTimestamps.has(ev.timestamp);
+    const roleTag=ev.role?`<span class="tag ${ev.role}">${ev.role}</span>`:`<span class="tag ${ev.event_type}">${ev.event_type}</span>`;
+    const tok=ev.known_total_tokens>0?fmtNum(ev.known_total_tokens):(ev.estimated_tokens>0?`<span class="est">~${fmtNum(ev.estimated_tokens)}</span>`:'—');
+    return`<tr${isLimitTime||highlight==='limit'&&isLimitTime?' class="highlight-row"':''}>
+      <td style="color:#aaa">${i+1}</td>
+      <td style="white-space:nowrap;color:#888;font-size:.75rem">${ev.timestamp?ev.timestamp.slice(11,19):'—'}</td>
+      <td>${roleTag}${ev.message_type?` <span style="color:#aaa;font-size:.7rem">${esc(ev.message_type)}</span>`:''}</td>
+      <td style="color:#666">${ev.tool_name?esc(ev.tool_name):'—'}</td>
+      <td style="color:#888">${ev.char_count>0?fmtNum(ev.char_count):'—'}</td>
+      <td>${tok}</td>
+    </tr>`;
+  }).join('')||'<tr><td colspan="6" style="color:#aaa">No events recorded.</td></tr>';
+
+  // Limits table
+  if(limits.length>0){
+    qs('limitsSection').style.display='';
+    qs('limitCount').textContent=limits.length;
+    qs('limitsBody').innerHTML=limits.map(l=>`<tr>
+      <td style="white-space:nowrap">${l.timestamp?l.timestamp.slice(0,19).replace('T',' '):'—'}</td>
+      <td><span class="tag ${l.classification}">${l.classification}</span></td>
+      <td>${esc(l.matched_pattern)}</td>
+      <td>${(l.confidence*100).toFixed(0)}%</td>
+      <td style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(l.redacted_excerpt)}">${esc(l.redacted_excerpt)}</td>
+    </tr>`).join('');
+  }
+
+  // Scroll to limits if that's the highlight
+  if(highlight==='limit'&&limits.length>0){
+    setTimeout(()=>qs('limitsSection').scrollIntoView({behavior:'smooth',block:'start'}),300);
+  }
+}
+
+function renderActivityChart(events, limits){
+  const canvas=qs('chartActivity');
+  if(!canvas||!events.length)return;
+
+  // Bucket events by minute
+  const buckets={};
+  for(const ev of events){
+    if(!ev.timestamp)continue;
+    const min=ev.timestamp.slice(0,16);
+    if(!buckets[min])buckets[min]={user:0,assistant:0,tool:0};
+    if(ev.role==='user')buckets[min].user++;
+    else if(ev.role==='assistant')buckets[min].assistant++;
+    else if(ev.event_type==='tool_call'||ev.event_type==='tool_result')buckets[min].tool++;
+  }
+  const labels=Object.keys(buckets).sort();
+  const limitMinutes=new Set((limits||[]).map(l=>l.timestamp?l.timestamp.slice(0,16):null).filter(Boolean));
+
+  new Chart(canvas,{
+    type:'bar',
+    data:{
+      labels:labels.map(l=>l.slice(11)),
+      datasets:[
+        {label:'User',data:labels.map(l=>buckets[l].user),backgroundColor:'rgba(59,130,246,.7)',stack:'s'},
+        {label:'Assistant',data:labels.map(l=>buckets[l].assistant),backgroundColor:'rgba(16,185,129,.7)',stack:'s'},
+        {label:'Tool',data:labels.map(l=>buckets[l].tool),backgroundColor:'rgba(245,158,11,.7)',stack:'s'},
+      ]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{
+        legend:{position:'top'},
+        annotation:{annotations:labels.map((l,i)=>limitMinutes.has(l)?{type:'line',xMin:i-.5,xMax:i+.5,borderColor:'rgba(220,38,38,.8)',borderWidth:2,borderDash:[4,2]}:null).filter(Boolean)},
+      },
+      scales:{x:{stacked:true},y:{stacked:true,beginAtZero:true,ticks:{precision:0}}}
+    }
+  });
+}
+
+load();
+</script>
+</body>
+</html>

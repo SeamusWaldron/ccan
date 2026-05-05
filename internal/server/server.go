@@ -12,6 +12,7 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -24,17 +25,65 @@ var dashboardHTMLBytes []byte
 //go:embed project.html
 var projectHTMLBytes []byte
 
+//go:embed session.html
+var sessionHTMLBytes []byte
+
+//go:embed day.html
+var dayHTMLBytes []byte
+
+//go:embed sessions.html
+var sessionsHTMLBytes []byte
+
 type Server struct {
-	db   *db.DB
-	host string
-	port int
+	db          *db.DB
+	host        string
+	port        int
+	ingestFn    func() error
+	ingestMu    sync.Mutex
+	lastIngest  time.Time
+	ingestErr   string
 }
 
 func New(database *db.DB, host string, port int) *Server {
 	return &Server{db: database, host: host, port: port}
 }
 
+func (s *Server) SetIngestFn(fn func() error) {
+	s.ingestFn = fn
+}
+
+func (s *Server) runIngest() error {
+	if s.ingestFn == nil {
+		return nil
+	}
+	if !s.ingestMu.TryLock() {
+		return fmt.Errorf("ingest already running")
+	}
+	defer s.ingestMu.Unlock()
+	err := s.ingestFn()
+	if err != nil {
+		s.ingestErr = err.Error()
+	} else {
+		s.ingestErr = ""
+		s.lastIngest = time.Now()
+	}
+	return err
+}
+
 func (s *Server) Serve() error {
+	// background ingest every 10 minutes if an ingest function is configured
+	if s.ingestFn != nil {
+		go func() {
+			// run once at startup to pick up anything new
+			_ = s.runIngest()
+			ticker := time.NewTicker(10 * time.Minute)
+			defer ticker.Stop()
+			for range ticker.C {
+				_ = s.runIngest()
+			}
+		}()
+	}
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/summary", s.handleSummary)
 	mux.HandleFunc("/api/daily", s.handleDaily)
@@ -42,7 +91,13 @@ func (s *Server) Serve() error {
 	mux.HandleFunc("/api/sessions", s.handleSessions)
 	mux.HandleFunc("/api/limit-events", s.handleLimitEvents)
 	mux.HandleFunc("/api/project/", s.handleProjectDetail)
+	mux.HandleFunc("/api/session", s.handleSessionDetail)
+	mux.HandleFunc("/api/day", s.handleDayDetail)
+	mux.HandleFunc("/api/ingest", s.handleIngest)
 	mux.HandleFunc("/project", s.handleProjectPage)
+	mux.HandleFunc("/session", s.handleSessionPage)
+	mux.HandleFunc("/day", s.handleDayPage)
+	mux.HandleFunc("/sessions", s.handleSessionsPage)
 	mux.HandleFunc("/", s.handleDashboard)
 
 	addr := fmt.Sprintf("%s:%d", s.host, s.port)
@@ -267,12 +322,15 @@ type sessionRow struct {
 	ID                    int64  `json:"id"`
 	SessionID             string `json:"session_id"`
 	ProjectID             int64  `json:"project_id"`
+	ProjectPath           string `json:"project_path,omitempty"`
 	StartedAt             string `json:"started_at"`
 	EndedAt               string `json:"ended_at"`
 	DurationSeconds       int64  `json:"duration_seconds"`
 	UserMessageCount      int    `json:"user_message_count"`
 	AssistantMessageCount int    `json:"assistant_message_count"`
 	ToolCallCount         int    `json:"tool_call_count"`
+	KnownInputTokens      int64  `json:"known_input_tokens"`
+	KnownOutputTokens     int64  `json:"known_output_tokens"`
 	KnownTotalTokens      int64  `json:"known_total_tokens"`
 	EstimatedTotalTokens  int64  `json:"estimated_total_tokens"`
 	LimitEventCount       int    `json:"limit_event_count"`
@@ -280,26 +338,88 @@ type sessionRow struct {
 	EndedAfterLimitEvent  bool   `json:"ended_after_limit_event"`
 }
 
+type sessionsListResponse struct {
+	Total    int          `json:"total"`
+	Offset   int          `json:"offset"`
+	Limit    int          `json:"limit"`
+	Sessions []sessionRow `json:"sessions"`
+}
+
+var allowedSessionSortCols = map[string]string{
+	"started_at":              "s.started_at",
+	"ended_at":                "s.ended_at",
+	"duration_seconds":        "s.duration_seconds",
+	"user_message_count":      "s.user_message_count",
+	"assistant_message_count": "s.assistant_message_count",
+	"tool_call_count":         "s.tool_call_count",
+	"known_total_tokens":      "s.known_total_tokens",
+	"estimated_total_tokens":  "s.estimated_total_tokens",
+	"limit_event_count":       "s.limit_event_count",
+}
+
 func (s *Server) handleSessions(w http.ResponseWriter, r *http.Request) {
 	since, until := dateFilters(r)
-	limitStr := r.URL.Query().Get("limit")
-	lim := 500
-	if limitStr != "" {
-		if n, err := strconv.Atoi(limitStr); err == nil && n > 0 {
+	q := r.URL.Query()
+
+	lim := 100
+	if v := q.Get("limit"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 && n <= 5000 {
 			lim = n
 		}
 	}
+	offset := 0
+	if v := q.Get("offset"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n >= 0 {
+			offset = n
+		}
+	}
+	projectID := q.Get("project_id")
+	search := q.Get("search") // match against decoded project path
 
-	rows, err := s.db.Query(`
-		SELECT id, COALESCE(session_id,''), project_id,
-		       COALESCE(started_at,''), COALESCE(ended_at,''), COALESCE(duration_seconds,0),
-		       user_message_count, assistant_message_count, tool_call_count,
-		       known_total_tokens, estimated_total_tokens,
-		       limit_event_count, COALESCE(first_limit_event_at,''), ended_after_limit_event
-		FROM sessions
-		WHERE (? = '' OR started_at >= ?) AND (? = '' OR started_at <= ?)
-		ORDER BY started_at DESC LIMIT ?`,
-		since, since, until, until, lim)
+	sortCol := "s.started_at"
+	if col, ok := allowedSessionSortCols[q.Get("sort_by")]; ok {
+		sortCol = col
+	}
+	sortDir := "DESC"
+	if strings.ToUpper(q.Get("sort_dir")) == "ASC" {
+		sortDir = "ASC"
+	}
+
+	where := `(? = '' OR s.started_at >= ?) AND (? = '' OR s.started_at <= ?)`
+	args := []any{since, since, until, until}
+	if projectID != "" {
+		where += ` AND s.project_id = ?`
+		args = append(args, projectID)
+	}
+	if search != "" {
+		where += ` AND (COALESCE(p.decoded_path_guess,'') LIKE ? OR COALESCE(s.session_id,'') LIKE ?)`
+		like := "%" + search + "%"
+		args = append(args, like, like)
+	}
+
+	// total count
+	var total int
+	countArgs := make([]any, len(args))
+	copy(countArgs, args)
+	countRow := s.db.QueryRow(
+		`SELECT COUNT(*) FROM sessions s LEFT JOIN projects p ON p.id=s.project_id WHERE `+where,
+		countArgs...,
+	)
+	_ = countRow.Scan(&total)
+
+	// data page
+	dataArgs := append(args, lim, offset)
+	rows, err := s.db.Query(
+		`SELECT s.id, COALESCE(s.session_id,''), s.project_id,
+		        COALESCE(p.decoded_path_guess,p.encoded_path,'') as project_path,
+		        COALESCE(s.started_at,''), COALESCE(s.ended_at,''), COALESCE(s.duration_seconds,0),
+		        s.user_message_count, s.assistant_message_count, s.tool_call_count,
+		        s.known_input_tokens, s.known_output_tokens, s.known_total_tokens, s.estimated_total_tokens,
+		        s.limit_event_count, COALESCE(s.first_limit_event_at,''), s.ended_after_limit_event
+		 FROM sessions s LEFT JOIN projects p ON p.id=s.project_id
+		 WHERE `+where+` ORDER BY `+sortCol+` `+sortDir+` LIMIT ? OFFSET ?`,
+		dataArgs...,
+	)
 	if err != nil {
 		jsonErr(w, err)
 		return
@@ -309,10 +429,10 @@ func (s *Server) handleSessions(w http.ResponseWriter, r *http.Request) {
 	for rows.Next() {
 		var sr sessionRow
 		if err := rows.Scan(
-			&sr.ID, &sr.SessionID, &sr.ProjectID,
+			&sr.ID, &sr.SessionID, &sr.ProjectID, &sr.ProjectPath,
 			&sr.StartedAt, &sr.EndedAt, &sr.DurationSeconds,
 			&sr.UserMessageCount, &sr.AssistantMessageCount, &sr.ToolCallCount,
-			&sr.KnownTotalTokens, &sr.EstimatedTotalTokens,
+			&sr.KnownInputTokens, &sr.KnownOutputTokens, &sr.KnownTotalTokens, &sr.EstimatedTotalTokens,
 			&sr.LimitEventCount, &sr.FirstLimitEventAt, &sr.EndedAfterLimitEvent,
 		); err != nil {
 			jsonErr(w, err)
@@ -320,7 +440,10 @@ func (s *Server) handleSessions(w http.ResponseWriter, r *http.Request) {
 		}
 		result = append(result, sr)
 	}
-	jsonOK(w, result)
+	if result == nil {
+		result = []sessionRow{}
+	}
+	jsonOK(w, sessionsListResponse{Total: total, Offset: offset, Limit: lim, Sessions: result})
 }
 
 // ── limit-events ──────────────────────────────────────────────────────────────
@@ -392,6 +515,7 @@ func (s *Server) handleProjectDetail(w http.ResponseWriter, r *http.Request) {
 		jsonErr(w, fmt.Errorf("invalid project id: %w", err))
 		return
 	}
+	since, until := dateFilters(r)
 
 	// Fetch project info
 	var proj projectInfoRow
@@ -419,7 +543,7 @@ func (s *Server) handleProjectDetail(w http.ResponseWriter, r *http.Request) {
 		       COALESCE(SUM(estimated_total_tokens),0),
 		       COALESCE(SUM(limit_event_count),0),
 		       MIN(started_at), MAX(ended_at)
-		FROM sessions WHERE project_id = ?`, id)
+		FROM sessions WHERE project_id = ? AND (? = '' OR started_at >= ?) AND (? = '' OR started_at <= ?)`, id, since, since, until, until)
 	var firstAt, lastAt sql.NullString
 	if err := sumRow.Scan(
 		&summ.ProjectCount, &summ.SessionCount,
@@ -443,9 +567,9 @@ func (s *Server) handleProjectDetail(w http.ResponseWriter, r *http.Request) {
 		       COALESCE(SUM(s.duration_seconds),0) as active_seconds,
 		       COALESCE(SUM(s.limit_event_count),0) as limit_events
 		FROM sessions s
-		WHERE s.project_id = ?
+		WHERE s.project_id = ? AND (? = '' OR s.started_at >= ?) AND (? = '' OR s.started_at <= ?)
 		GROUP BY DATE(s.started_at)
-		ORDER BY date ASC`, id)
+		ORDER BY date ASC`, id, since, since, until, until)
 	if err != nil {
 		jsonErr(w, err)
 		return
@@ -469,12 +593,12 @@ func (s *Server) handleProjectDetail(w http.ResponseWriter, r *http.Request) {
 		SELECT id, COALESCE(session_id,''), project_id,
 		       COALESCE(started_at,''), COALESCE(ended_at,''), COALESCE(duration_seconds,0),
 		       user_message_count, assistant_message_count, tool_call_count,
-		       known_total_tokens, estimated_total_tokens,
+		       known_input_tokens, known_output_tokens, known_total_tokens, estimated_total_tokens,
 		       limit_event_count, COALESCE(first_limit_event_at,''), ended_after_limit_event
 		FROM sessions
-		WHERE project_id = ?
+		WHERE project_id = ? AND (? = '' OR started_at >= ?) AND (? = '' OR started_at <= ?)
 		ORDER BY started_at DESC
-		LIMIT 1000`, id)
+		LIMIT 1000`, id, since, since, until, until)
 	if err != nil {
 		jsonErr(w, err)
 		return
@@ -487,7 +611,7 @@ func (s *Server) handleProjectDetail(w http.ResponseWriter, r *http.Request) {
 			&r.ID, &r.SessionID, &r.ProjectID,
 			&r.StartedAt, &r.EndedAt, &r.DurationSeconds,
 			&r.UserMessageCount, &r.AssistantMessageCount, &r.ToolCallCount,
-			&r.KnownTotalTokens, &r.EstimatedTotalTokens,
+			&r.KnownInputTokens, &r.KnownOutputTokens, &r.KnownTotalTokens, &r.EstimatedTotalTokens,
 			&r.LimitEventCount, &r.FirstLimitEventAt, &r.EndedAfterLimitEvent,
 		); err != nil {
 			jsonErr(w, err)
@@ -501,9 +625,9 @@ func (s *Server) handleProjectDetail(w http.ResponseWriter, r *http.Request) {
 		SELECT COALESCE(timestamp,''), classification, matched_pattern, confidence,
 		       COALESCE(redacted_excerpt,''), COALESCE(session_id,'')
 		FROM limit_events
-		WHERE project_id = ?
+		WHERE project_id = ? AND (? = '' OR timestamp >= ?) AND (? = '' OR timestamp <= ?)
 		ORDER BY timestamp DESC
-		LIMIT 1000`, id)
+		LIMIT 1000`, id, since, since, until, until)
 	if err != nil {
 		jsonErr(w, err)
 		return
@@ -535,6 +659,391 @@ func (s *Server) handleProjectDetail(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleProjectPage(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Write(projectHTMLBytes)
+}
+
+// ── session detail ────────────────────────────────────────────────────────────
+
+type eventRow struct {
+	ID                int64  `json:"id"`
+	Timestamp         string `json:"timestamp"`
+	EventType         string `json:"event_type"`
+	Role              string `json:"role"`
+	MessageType       string `json:"message_type"`
+	ToolName          string `json:"tool_name"`
+	CharCount         int    `json:"char_count"`
+	EstimatedTokens   int64  `json:"estimated_tokens"`
+	KnownInputTokens  int64  `json:"known_input_tokens"`
+	KnownOutputTokens int64  `json:"known_output_tokens"`
+	KnownTotalTokens  int64  `json:"known_total_tokens"`
+}
+
+type sessionDetailResponse struct {
+	Session     sessionRow      `json:"session"`
+	Events      []eventRow      `json:"events"`
+	LimitEvents []limitEventRow `json:"limit_events"`
+}
+
+func (s *Server) handleSessionDetail(w http.ResponseWriter, r *http.Request) {
+	var sess sessionRow
+	var first, last sql.NullString
+
+	idStr := r.URL.Query().Get("id")
+	sidStr := r.URL.Query().Get("sid")
+
+	var err error
+	if idStr != "" {
+		id, parseErr := strconv.ParseInt(idStr, 10, 64)
+		if parseErr != nil {
+			jsonErr(w, fmt.Errorf("invalid id"))
+			return
+		}
+		err = s.db.QueryRow(`
+			SELECT id, COALESCE(session_id,''), project_id,
+			       COALESCE(started_at,''), COALESCE(ended_at,''), COALESCE(duration_seconds,0),
+			       user_message_count, assistant_message_count, tool_call_count,
+			       known_input_tokens, known_output_tokens, known_total_tokens, estimated_total_tokens,
+			       limit_event_count, COALESCE(first_limit_event_at,''), ended_after_limit_event
+			FROM sessions WHERE id = ?`, id).Scan(
+			&sess.ID, &sess.SessionID, &sess.ProjectID,
+			&sess.StartedAt, &sess.EndedAt, &sess.DurationSeconds,
+			&sess.UserMessageCount, &sess.AssistantMessageCount, &sess.ToolCallCount,
+			&sess.KnownInputTokens, &sess.KnownOutputTokens, &sess.KnownTotalTokens, &sess.EstimatedTotalTokens,
+			&sess.LimitEventCount, &sess.FirstLimitEventAt, &sess.EndedAfterLimitEvent,
+		)
+	} else if sidStr != "" {
+		err = s.db.QueryRow(`
+			SELECT id, COALESCE(session_id,''), project_id,
+			       COALESCE(started_at,''), COALESCE(ended_at,''), COALESCE(duration_seconds,0),
+			       user_message_count, assistant_message_count, tool_call_count,
+			       known_input_tokens, known_output_tokens, known_total_tokens, estimated_total_tokens,
+			       limit_event_count, COALESCE(first_limit_event_at,''), ended_after_limit_event
+			FROM sessions WHERE session_id = ?`, sidStr).Scan(
+			&sess.ID, &sess.SessionID, &sess.ProjectID,
+			&sess.StartedAt, &sess.EndedAt, &sess.DurationSeconds,
+			&sess.UserMessageCount, &sess.AssistantMessageCount, &sess.ToolCallCount,
+			&sess.KnownInputTokens, &sess.KnownOutputTokens, &sess.KnownTotalTokens, &sess.EstimatedTotalTokens,
+			&sess.LimitEventCount, &sess.FirstLimitEventAt, &sess.EndedAfterLimitEvent,
+		)
+	} else {
+		jsonErr(w, fmt.Errorf("id or sid required"))
+		return
+	}
+	_ = first
+	_ = last
+	if err != nil {
+		jsonErr(w, err)
+		return
+	}
+
+	evRows, err := s.db.Query(`
+		SELECT id, COALESCE(timestamp,''), event_type, COALESCE(role,''),
+		       COALESCE(message_type,''), COALESCE(tool_name,''),
+		       char_count, estimated_tokens,
+		       known_input_tokens, known_output_tokens, known_total_tokens
+		FROM events
+		WHERE session_db_id = ?
+		ORDER BY line_number ASC`, sess.ID)
+	if err != nil {
+		jsonErr(w, err)
+		return
+	}
+	defer evRows.Close()
+	var events []eventRow
+	for evRows.Next() {
+		var ev eventRow
+		if err := evRows.Scan(
+			&ev.ID, &ev.Timestamp, &ev.EventType, &ev.Role,
+			&ev.MessageType, &ev.ToolName,
+			&ev.CharCount, &ev.EstimatedTokens,
+			&ev.KnownInputTokens, &ev.KnownOutputTokens, &ev.KnownTotalTokens,
+		); err != nil {
+			jsonErr(w, err)
+			return
+		}
+		events = append(events, ev)
+	}
+
+	limRows, err := s.db.Query(`
+		SELECT COALESCE(timestamp,''), classification, matched_pattern, confidence,
+		       COALESCE(redacted_excerpt,''), COALESCE(session_id,'')
+		FROM limit_events
+		WHERE session_db_id = ?
+		ORDER BY timestamp ASC`, sess.ID)
+	if err != nil {
+		jsonErr(w, err)
+		return
+	}
+	defer limRows.Close()
+	var limits []limitEventRow
+	for limRows.Next() {
+		var le limitEventRow
+		if err := limRows.Scan(
+			&le.Timestamp, &le.Classification, &le.MatchedPattern, &le.Confidence,
+			&le.RedactedExcerpt, &le.SessionID,
+		); err != nil {
+			jsonErr(w, err)
+			return
+		}
+		limits = append(limits, le)
+	}
+
+	jsonOK(w, sessionDetailResponse{Session: sess, Events: events, LimitEvents: limits})
+}
+
+func (s *Server) handleSessionPage(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Write(sessionHTMLBytes)
+}
+
+// ── ingest ────────────────────────────────────────────────────────────────────
+
+func (s *Server) handleIngest(w http.ResponseWriter, r *http.Request) {
+	if s.ingestFn == nil {
+		jsonOK(w, map[string]any{"status": "no_ingest", "message": "no ingest function configured"})
+		return
+	}
+	if err := s.runIngest(); err != nil {
+		if err.Error() == "ingest already running" {
+			jsonOK(w, map[string]any{"status": "busy", "message": "ingest already in progress"})
+			return
+		}
+		jsonErr(w, err)
+		return
+	}
+	jsonOK(w, map[string]any{
+		"status":      "ok",
+		"last_ingest": s.lastIngest.Format(time.RFC3339),
+	})
+}
+
+// ── day detail ────────────────────────────────────────────────────────────────
+
+type hourlyRow struct {
+	Hour             int   `json:"hour"`
+	UserMessages     int   `json:"user_messages"`
+	AssistantMessages int  `json:"assistant_messages"`
+	ToolCalls        int   `json:"tool_calls"`
+	KnownTokens      int64 `json:"known_tokens"`
+	EstimatedTokens  int64 `json:"estimated_tokens"`
+	LimitEvents      int   `json:"limit_events"`
+}
+
+type dayDetailResponse struct {
+	Date        string          `json:"date"`
+	Hour        int             `json:"hour"` // -1 = full day view; 0-23 = hour drill-through
+	Hourly      []hourlyRow     `json:"hourly"`
+	Sessions    []sessionRow    `json:"sessions"`
+	LimitEvents []limitEventRow `json:"limit_events"`
+}
+
+func (s *Server) handleDayDetail(w http.ResponseWriter, r *http.Request) {
+	date := r.URL.Query().Get("date")
+	if date == "" {
+		date = time.Now().Format("2006-01-02")
+	}
+	if _, err := time.Parse("2006-01-02", date); err != nil {
+		jsonErr(w, fmt.Errorf("invalid date"))
+		return
+	}
+	projectID := r.URL.Query().Get("project_id")
+	hourStr := r.URL.Query().Get("hour")
+	hourDrill := -1
+	if hourStr != "" {
+		if h, err := strconv.Atoi(hourStr); err == nil && h >= 0 && h <= 23 {
+			hourDrill = h
+		}
+	}
+
+	projFilter := projectID != ""
+	projIDInt, _ := strconv.ParseInt(projectID, 10, 64)
+
+	// Build reusable WHERE args helper
+	buildWhere := func(extraClauses ...string) (string, []any) {
+		var clauses []string
+		var args []any
+		if hourDrill >= 0 {
+			clauses = append(clauses, "DATE(timestamp) = ?")
+			args = append(args, date)
+			clauses = append(clauses, "CAST(strftime('%H', timestamp) AS INTEGER) = ?")
+			args = append(args, hourDrill)
+		} else {
+			clauses = append(clauses, "DATE(timestamp) = ?")
+			args = append(args, date)
+		}
+		if projFilter {
+			clauses = append(clauses, "project_id = ?")
+			args = append(args, projIDInt)
+		}
+		for _, c := range extraClauses {
+			clauses = append(clauses, c)
+		}
+		where := strings.Join(clauses, " AND ")
+		return where, args
+	}
+	buildSessionWhere := func() (string, []any) {
+		var clauses []string
+		var args []any
+		if hourDrill >= 0 {
+			// Find sessions that have events in this specific hour, not just sessions that started here.
+			// Long-running sessions (started at 06:xx, still active at 12:xx) will show up correctly.
+			clauses = append(clauses, `session_id IN (
+				SELECT DISTINCT session_id FROM events
+				WHERE DATE(timestamp) = ?
+				  AND CAST(strftime('%H', timestamp) AS INTEGER) = ?
+			)`)
+			args = append(args, date, hourDrill)
+		} else {
+			// Include sessions that started on this date OR have events on this date
+			// (catches long-running sessions that span into a new day or were late-ingested)
+			clauses = append(clauses, `(DATE(started_at) = ? OR session_id IN (
+				SELECT DISTINCT session_id FROM events WHERE DATE(timestamp) = ?
+			))`)
+			args = append(args, date, date)
+		}
+		if projFilter {
+			clauses = append(clauses, "project_id = ?")
+			args = append(args, projIDInt)
+		}
+		return strings.Join(clauses, " AND "), args
+	}
+
+	// Event breakdown — hourly for day view, 5-minute for hour drill
+	var bucketExpr string
+	if hourDrill >= 0 {
+		bucketExpr = "(CAST(strftime('%M', timestamp) AS INTEGER) / 5) * 5"
+	} else {
+		bucketExpr = "CAST(strftime('%H', timestamp) AS INTEGER)"
+	}
+	evWhere, evArgs := buildWhere()
+	evRows, err := s.db.Query(
+		`SELECT `+bucketExpr+` as bucket,
+		        SUM(CASE WHEN role='user' THEN 1 ELSE 0 END),
+		        SUM(CASE WHEN role='assistant' THEN 1 ELSE 0 END),
+		        SUM(CASE WHEN event_type='tool_call' THEN 1 ELSE 0 END),
+		        COALESCE(SUM(known_total_tokens),0), COALESCE(SUM(estimated_tokens),0)
+		 FROM events WHERE `+evWhere+
+			` GROUP BY bucket ORDER BY bucket ASC`,
+		evArgs...,
+	)
+	if err != nil {
+		jsonErr(w, err)
+		return
+	}
+	defer evRows.Close()
+	hourMap := make(map[int]*hourlyRow)
+	for evRows.Next() {
+		var hr hourlyRow
+		if err := evRows.Scan(&hr.Hour, &hr.UserMessages, &hr.AssistantMessages, &hr.ToolCalls, &hr.KnownTokens, &hr.EstimatedTokens); err != nil {
+			jsonErr(w, err)
+			return
+		}
+		hourMap[hr.Hour] = &hr
+	}
+
+	// Overlay limit events per bucket
+	limBucketWhere, limBucketArgs := buildWhere()
+	limHourRows, err := s.db.Query(
+		`SELECT `+bucketExpr+` as bucket, COUNT(*)
+		 FROM limit_events WHERE `+limBucketWhere+` GROUP BY bucket`,
+		limBucketArgs...,
+	)
+	if err != nil {
+		jsonErr(w, err)
+		return
+	}
+	defer limHourRows.Close()
+	for limHourRows.Next() {
+		var h, cnt int
+		if err := limHourRows.Scan(&h, &cnt); err == nil {
+			if hr, ok := hourMap[h]; ok {
+				hr.LimitEvents = cnt
+			} else {
+				hourMap[h] = &hourlyRow{Hour: h, LimitEvents: cnt}
+			}
+		}
+	}
+
+	hourly := make([]hourlyRow, 0, len(hourMap))
+	for _, hr := range hourMap {
+		hourly = append(hourly, *hr)
+	}
+	for i := 0; i < len(hourly); i++ {
+		for j := i + 1; j < len(hourly); j++ {
+			if hourly[j].Hour < hourly[i].Hour {
+				hourly[i], hourly[j] = hourly[j], hourly[i]
+			}
+		}
+	}
+
+	// Sessions
+	sessWhere, sessArgs := buildSessionWhere()
+	sessRows, err := s.db.Query(
+		`SELECT id, COALESCE(session_id,''), project_id,
+		        COALESCE(started_at,''), COALESCE(ended_at,''), COALESCE(duration_seconds,0),
+		        user_message_count, assistant_message_count, tool_call_count,
+		        known_input_tokens, known_output_tokens, known_total_tokens, estimated_total_tokens,
+		        limit_event_count, COALESCE(first_limit_event_at,''), ended_after_limit_event
+		 FROM sessions WHERE `+sessWhere+` ORDER BY started_at ASC`,
+		sessArgs...,
+	)
+	if err != nil {
+		jsonErr(w, err)
+		return
+	}
+	defer sessRows.Close()
+	var sessions []sessionRow
+	for sessRows.Next() {
+		var sr sessionRow
+		if err := sessRows.Scan(
+			&sr.ID, &sr.SessionID, &sr.ProjectID,
+			&sr.StartedAt, &sr.EndedAt, &sr.DurationSeconds,
+			&sr.UserMessageCount, &sr.AssistantMessageCount, &sr.ToolCallCount,
+			&sr.KnownInputTokens, &sr.KnownOutputTokens, &sr.KnownTotalTokens, &sr.EstimatedTotalTokens,
+			&sr.LimitEventCount, &sr.FirstLimitEventAt, &sr.EndedAfterLimitEvent,
+		); err != nil {
+			jsonErr(w, err)
+			return
+		}
+		sessions = append(sessions, sr)
+	}
+
+	// Limit events
+	limWhere, limArgs := buildWhere()
+	limRows, err := s.db.Query(
+		`SELECT COALESCE(timestamp,''), classification, matched_pattern, confidence,
+		        COALESCE(redacted_excerpt,''), COALESCE(session_id,'')
+		 FROM limit_events WHERE `+limWhere+` ORDER BY timestamp ASC`,
+		limArgs...,
+	)
+	if err != nil {
+		jsonErr(w, err)
+		return
+	}
+	defer limRows.Close()
+	var limits []limitEventRow
+	for limRows.Next() {
+		var le limitEventRow
+		if err := limRows.Scan(
+			&le.Timestamp, &le.Classification, &le.MatchedPattern, &le.Confidence,
+			&le.RedactedExcerpt, &le.SessionID,
+		); err != nil {
+			jsonErr(w, err)
+			return
+		}
+		limits = append(limits, le)
+	}
+
+	jsonOK(w, dayDetailResponse{Date: date, Hour: hourDrill, Hourly: hourly, Sessions: sessions, LimitEvents: limits})
+}
+
+func (s *Server) handleDayPage(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Write(dayHTMLBytes)
+}
+
+func (s *Server) handleSessionsPage(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Write(sessionsHTMLBytes)
 }
 
 // ── dashboard ─────────────────────────────────────────────────────────────────
