@@ -4,8 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Claude Code Usage — Sessions</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box}
+:root{
+  --fn:'JetBrains Mono',ui-monospace,'SF Mono','Fira Code',monospace;
+  --red:#ef4444;--red-bg:rgba(239,68,68,.05);
+}
 body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#f5f5f5;color:#222}
 header{background:#1a1a2e;color:#eee;padding:1rem 2rem;display:flex;justify-content:space-between;align-items:center}
 header h1{margin:0;font-size:1.4rem}
@@ -38,12 +44,15 @@ th:not(.sort-asc):not(.sort-desc) .sort-icon::after{content:'⇅'}
 td{padding:.45rem .65rem;border-bottom:1px solid #f0f0f0;vertical-align:middle}
 tr:last-child td{border-bottom:none}
 tr[onclick]:hover td{background:#f0f7ff;cursor:pointer}
-.tag{display:inline-block;padding:.1rem .4rem;border-radius:4px;font-size:.65rem;font-weight:600;text-transform:uppercase}
+.limit-row td{background:var(--red-bg)!important;box-shadow:inset 3px 0 0 var(--red)}
+.limit-row:hover td{background:rgba(239,68,68,.08)!important}
+.num{font-family:var(--fn)}
+.tag{display:inline-block;padding:.1rem .4rem;border-radius:4px;font-size:.65rem;font-weight:600;text-transform:uppercase;font-family:var(--fn)}
 .tag.hard_limit,.tag.quota_limit{background:#fde8e8;color:#c0392b}
 .tag.rate_limit{background:#fef3cd;color:#856404}
 .tag.temporary_capacity{background:#e2e8f0;color:#475569}
 .tag.unknown_limit{background:#f1f5f9;color:#64748b}
-.est{color:#aaa;font-style:italic}
+.est{color:#aaa;font-style:italic;font-family:var(--fn)}
 .project-cell{max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#3b82f6;font-size:.75rem}
 /* pagination */
 .pagination{display:flex;align-items:center;gap:.4rem;margin-top:.75rem;justify-content:center;flex-wrap:wrap}
@@ -55,12 +64,13 @@ tr[onclick]:hover td{background:#f0f7ff;cursor:pointer}
 .chunk{background:#fff;border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.1);margin-bottom:.75rem;overflow:hidden}
 .chunk-header{display:flex;align-items:center;gap:1.5rem;padding:.65rem 1rem;background:#f8fafc;border-bottom:1px solid #eee;cursor:pointer;user-select:none}
 .chunk-header:hover{background:#f0f7ff}
-.chunk-time{font-weight:600;font-size:.85rem;min-width:140px}
+.chunk-time{font-weight:600;font-size:.85rem;min-width:140px;font-family:var(--fn)}
 .chunk-stat{font-size:.78rem;color:#666}
-.chunk-stat strong{color:#222}
+.chunk-stat strong{color:#222;font-family:var(--fn)}
 .chunk-sessions{display:none}
 .chunk-sessions.open{display:block}
-.chunk-has-limit .chunk-time{color:#c0392b}
+.chunk-has-limit{border-left:3px solid var(--red)}
+.chunk-has-limit .chunk-time{color:var(--red)}
 .no-data{text-align:center;color:#aaa;padding:2rem;font-size:.85rem}
 footer{text-align:center;padding:1.5rem;font-size:.7rem;color:#bbb}
 </style>
@@ -247,12 +257,12 @@ function renderList(){
   qs('statusText').innerHTML=`Showing <strong>${from}–${to}</strong> of <strong>${fmtNum(total)}</strong> sessions`;
 
   const sessionsBackUrl=encodeURIComponent(window.location.href);
-  qs('tbody').innerHTML=sessions.map(s=>`<tr onclick="window.location='/session?id=${s.id}&back=${sessionsBackUrl}'">
-    <td style="white-space:nowrap">${fmtTime(s.started_at)}</td>
-    <td>${fmtDur(s.duration_seconds)}</td>
-    <td>${s.user_message_count||0}</td>
-    <td>${s.assistant_message_count||0}</td>
-    <td>${s.tool_call_count||0}</td>
+  qs('tbody').innerHTML=sessions.map(s=>`<tr class="${s.limit_event_count>0?'limit-row':''}" onclick="window.location='/session?id=${s.id}&back=${sessionsBackUrl}'">
+    <td class="num" style="white-space:nowrap;font-size:.75rem">${fmtTime(s.started_at)}</td>
+    <td class="num">${fmtDur(s.duration_seconds)}</td>
+    <td class="num">${s.user_message_count||0}</td>
+    <td class="num">${s.assistant_message_count||0}</td>
+    <td class="num">${s.tool_call_count||0}</td>
     <td>${fmtTok(s)}</td>
     <td>${s.limit_event_count>0?`<span class="tag hard_limit">${s.limit_event_count}</span>`:'—'}</td>
     <td class="project-cell" title="${esc(s.project_path)}">${esc(s.project_path||'—')}</td>
@@ -347,12 +357,12 @@ function renderChunks(sessions){
     const hasLimit=b.limits>0;
     const tok=b.knownTok>0?fmtNum(b.knownTok):(b.estTok>0?`~${fmtNum(b.estTok)}`:'—');
     const chunkBack=encodeURIComponent(window.location.href);
-    const rows=b.sessions.map(s=>`<tr onclick="window.location='/session?id=${s.id}&back=${chunkBack}'">
-      <td style="white-space:nowrap;padding-left:2rem">${fmtShortTime(s.started_at)}</td>
-      <td>${fmtDur(s.duration_seconds)}</td>
-      <td>${s.user_message_count||0}</td>
-      <td>${s.assistant_message_count||0}</td>
-      <td>${s.tool_call_count||0}</td>
+    const rows=b.sessions.map(s=>`<tr class="${s.limit_event_count>0?'limit-row':''}" onclick="window.location='/session?id=${s.id}&back=${chunkBack}'">
+      <td class="num" style="white-space:nowrap;padding-left:2rem;font-size:.75rem">${fmtShortTime(s.started_at)}</td>
+      <td class="num">${fmtDur(s.duration_seconds)}</td>
+      <td class="num">${s.user_message_count||0}</td>
+      <td class="num">${s.assistant_message_count||0}</td>
+      <td class="num">${s.tool_call_count||0}</td>
       <td>${fmtTok(s)}</td>
       <td>${s.limit_event_count>0?`<span class="tag hard_limit">${s.limit_event_count}</span>`:'—'}</td>
       <td class="project-cell" title="${esc(s.project_path)}">${esc(s.project_path||'—')}</td>

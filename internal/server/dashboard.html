@@ -4,8 +4,15 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Claude Code Usage Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box}
+:root{
+  --fn:'JetBrains Mono',ui-monospace,'SF Mono','Fira Code',monospace;
+  --red:#ef4444;--red-bg:rgba(239,68,68,.05);--red-border:rgba(239,68,68,.3);
+  --amber:#f59e0b;--blue:#3b82f6;--green:#10b981;
+}
 body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#f5f5f5;color:#222}
 header{background:#1a1a2e;color:#eee;padding:1rem 2rem}
 header h1{margin:0;font-size:1.4rem}
@@ -16,28 +23,43 @@ header p{margin:.25rem 0 0;font-size:.85rem;opacity:.7}
 .toolbar button{background:#3b82f6;color:#fff;border:none;border-radius:4px;padding:.35rem .9rem;font-size:.8rem;cursor:pointer}
 .toolbar button:hover{background:#2563eb}
 main{max-width:1400px;margin:1.5rem auto;padding:0 1.5rem}
+/* cards */
 .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:.75rem;margin-bottom:1.5rem}
-.card{background:#fff;border-radius:8px;padding:1rem 1.25rem;box-shadow:0 1px 3px rgba(0,0,0,.1)}
-.card .label{font-size:.7rem;text-transform:uppercase;color:#888;margin-bottom:.3rem}
-.card .value{font-size:1.6rem;font-weight:700}
-.card.warn .value{color:#c0392b}
+.card{background:#fff;border-radius:8px;padding:1rem 1.25rem;box-shadow:0 1px 3px rgba(0,0,0,.1);border-left:3px solid transparent}
+.card .label{font-size:.7rem;text-transform:uppercase;color:#888;margin-bottom:.3rem;letter-spacing:.04em}
+.card .value{font-size:1.6rem;font-weight:700;font-family:var(--fn)}
+.card.warn{border-left-color:var(--red)}
+.card.warn .value{color:var(--red)}
 .card .note{font-size:.65rem;color:#aaa;margin-top:.2rem}
+/* sections */
 .chart-section{background:#fff;border-radius:8px;padding:1.25rem 1.5rem;box-shadow:0 1px 3px rgba(0,0,0,.1);margin-bottom:1.5rem}
 .chart-section h2{margin:0 0 .75rem;font-size:.95rem;color:#555}
 .chart-wrap{position:relative;height:260px}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem}
 @media(max-width:768px){.grid2{grid-template-columns:1fr}}
+/* tables */
 table{width:100%;border-collapse:collapse;font-size:.8rem}
 th,td{padding:.5rem .6rem;text-align:left;border-bottom:1px solid #eee}
 th{background:#f9f9f9;font-weight:600;color:#555}
-tr[onclick]:hover td{background:#f0f7ff}
-.tag{display:inline-block;padding:.1rem .4rem;border-radius:4px;font-size:.65rem;font-weight:600;text-transform:uppercase}
+tr[onclick]:hover td{background:#f0f7ff;cursor:pointer}
+/* limit row tinting — red inset shadow like Argus */
+.limit-row td{background:var(--red-bg)!important;box-shadow:inset 3px 0 0 var(--red)}
+.limit-row:hover td{background:rgba(239,68,68,.08)!important}
+/* num class */
+.num{font-family:var(--fn)}
+.est{color:#aaa;font-style:italic;font-family:var(--fn)}
+/* tags */
+.tag{display:inline-block;padding:.1rem .4rem;border-radius:4px;font-size:.65rem;font-weight:600;text-transform:uppercase;font-family:var(--fn)}
 .tag.hard_limit{background:#fde8e8;color:#c0392b}
 .tag.rate_limit{background:#fef3cd;color:#856404}
 .tag.quota_limit{background:#fde8e8;color:#c0392b}
 .tag.temporary_capacity{background:#e2e8f0;color:#475569}
 .tag.unknown_limit{background:#f1f5f9;color:#64748b}
-.est{color:#aaa;font-style:italic}
+/* inline progress bar (Argus-style 6px bar) */
+.bar-wrap{margin-top:3px;height:4px;background:#f0f0f0;border-radius:2px;min-width:40px}
+.bar-fill{height:100%;border-radius:2px;transition:width .3s ease}
+.bar-blue{background:rgba(59,130,246,.6)}
+.bar-red{background:rgba(239,68,68,.6)}
 footer{text-align:center;padding:1.5rem;font-size:.7rem;color:#bbb}
 </style>
 </head>
@@ -116,8 +138,8 @@ function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace
 function fmtDur(s){if(!s)return'—';const m=Math.floor(s/60),sec=s%60;return m>0?m+'m '+sec+'s':sec+'s'}
 function fmtNum(n){return n?n.toLocaleString():'0'}
 function fmtTok(s){
-  if(s.known_total_tokens>0)return fmtNum(s.known_total_tokens);
-  if(s.estimated_total_tokens>0)return '<span class="est">~'+fmtNum(s.estimated_total_tokens)+'</span>';
+  if(s.known_total_tokens>0)return`<span class="num">${fmtNum(s.known_total_tokens)}</span>`;
+  if(s.estimated_total_tokens>0)return`<span class="est">~${fmtNum(s.estimated_total_tokens)}</span>`;
   return '—';
 }
 
@@ -193,7 +215,7 @@ function renderCards(s){
     ['Assistant messages',fmtNum(s.assistant_messages),''],
     ['Tool calls',fmtNum(s.tool_calls),''],
     ['Known tokens',fmtNum(s.known_total_tokens),''],
-    ['Est. tokens','<span class="est">'+fmtNum(s.estimated_total_tokens)+'</span>','Estimated (chars/4)',''],
+    ['Est. tokens',fmtNum(s.estimated_total_tokens),'Estimated (chars/4)',''],
     ['Active days',fmtNum(s.active_days),''],
     ['Limit events',fmtNum(s.limit_events),'',s.limit_events>0?'warn':''],
   ].map(([l,v,n,cls])=>`<div class="card ${cls||''}"><div class="label">${l}</div><div class="value">${v}</div>${n?'<div class="note">'+n+'</div>':''}</div>`).join('');
@@ -227,23 +249,30 @@ function renderCharts(daily){
 function renderProjects(projects){
   const tb=qs('projectsBody');
   if(!tb)return;
-  tb.innerHTML=(projects||[]).map(p=>`<tr>
-    <td style="max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(p.decoded_path)}"><a href="/project?id=${p.id}" style="text-decoration:none;color:#3b82f6">${esc(p.decoded_path||p.encoded_path)}</a></td>
-    <td>${p.session_count}</td><td>${fmtNum(p.total_messages)}</td>
-    <td>${fmtNum(p.total_tool_calls)}</td><td>${fmtNum(p.total_known_tokens)}</td>
-    <td>${p.total_limit_events>0?'<span class="tag hard_limit">'+p.total_limit_events+'</span>':'—'}</td>
-    <td>${p.last_seen_at?p.last_seen_at.slice(0,10):'—'}</td>
-  </tr>`).join('')||'<tr><td colspan="7" style="color:#aaa">No projects.</td></tr>';
+  const maxTok=Math.max(1,...(projects||[]).map(p=>p.total_known_tokens||0));
+  tb.innerHTML=(projects||[]).map(p=>{
+    const pct=Math.round((p.total_known_tokens||0)/maxTok*100);
+    const hasLim=p.total_limit_events>0;
+    return`<tr class="${hasLim?'limit-row':''}">
+      <td style="max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(p.decoded_path)}"><a href="/project?id=${p.id}" style="text-decoration:none;color:#3b82f6">${esc(p.decoded_path||p.encoded_path)}</a></td>
+      <td class="num">${p.session_count}</td>
+      <td class="num">${fmtNum(p.total_messages)}</td>
+      <td class="num">${fmtNum(p.total_tool_calls)}</td>
+      <td>${p.total_known_tokens>0?`<span class="num">${fmtNum(p.total_known_tokens)}</span><div class="bar-wrap"><div class="bar-fill bar-blue" style="width:${pct}%"></div></div>`:'—'}</td>
+      <td>${hasLim?`<span class="tag hard_limit">${p.total_limit_events}</span>`:'—'}</td>
+      <td class="num" style="color:#888;font-size:.75rem">${p.last_seen_at?p.last_seen_at.slice(0,10):'—'}</td>
+    </tr>`;
+  }).join('')||'<tr><td colspan="7" style="color:#aaa">No projects.</td></tr>';
 }
 
 function renderSessions(sessions){
   const tb=qs('sessionsBody');
   if(!tb)return;
-  tb.innerHTML=(sessions||[]).map(s=>`<tr style="cursor:pointer" onclick="window.location='/session?id=${s.id}&back='+encodeURIComponent(window.location.href)">
-    <td>${s.started_at?s.started_at.slice(0,19).replace('T',' '):'—'}</td>
-    <td>${fmtDur(s.duration_seconds)}</td>
-    <td>${s.user_message_count}</td><td>${s.assistant_message_count}</td>
-    <td>${s.tool_call_count}</td><td>${fmtTok(s)}</td>
+  tb.innerHTML=(sessions||[]).map(s=>`<tr class="${s.limit_event_count>0?'limit-row':''}" style="cursor:pointer" onclick="window.location='/session?id=${s.id}&back='+encodeURIComponent(window.location.href)">
+    <td class="num" style="font-size:.75rem">${s.started_at?s.started_at.slice(0,19).replace('T',' '):'—'}</td>
+    <td class="num">${fmtDur(s.duration_seconds)}</td>
+    <td class="num">${s.user_message_count}</td><td class="num">${s.assistant_message_count}</td>
+    <td class="num">${s.tool_call_count}</td><td>${fmtTok(s)}</td>
     <td>${s.limit_event_count>0?'<span class="tag hard_limit">'+s.limit_event_count+'</span>':'—'}</td>
   </tr>`).join('')||'<tr><td colspan="7" style="color:#aaa">No sessions.</td></tr>';
 }
@@ -252,11 +281,11 @@ function renderLimits(limits){
   const tb=qs('limitsBody');
   if(!tb)return;
   const dashBack=encodeURIComponent(window.location.href);
-  tb.innerHTML=(limits||[]).map(l=>`<tr style="${l.session_id?'cursor:pointer':''}" ${l.session_id?`onclick="window.location='/session?sid=${encodeURIComponent(l.session_id)}&highlight=limit&back=${dashBack}'"`:''}>
-    <td>${l.timestamp?l.timestamp.slice(0,19).replace('T',' '):'—'}</td>
+  tb.innerHTML=(limits||[]).map(l=>`<tr class="limit-row" style="${l.session_id?'cursor:pointer':''}" ${l.session_id?`onclick="window.location='/session?sid=${encodeURIComponent(l.session_id)}&highlight=limit&back=${dashBack}'"`:''}>
+    <td class="num" style="font-size:.75rem">${l.timestamp?l.timestamp.slice(0,19).replace('T',' '):'—'}</td>
     <td><span class="tag ${l.classification}">${l.classification}</span></td>
     <td>${esc(l.matched_pattern)}</td>
-    <td>${(l.confidence*100).toFixed(0)}%</td>
+    <td class="num">${(l.confidence*100).toFixed(0)}%</td>
     <td style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(l.redacted_excerpt)}">${esc(l.redacted_excerpt)}</td>
   </tr>`).join('')||'<tr><td colspan="5" style="color:#aaa">No limit events detected.</td></tr>';
 }

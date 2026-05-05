@@ -4,8 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Claude Code Usage — Day View</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box}
+:root{--fn:'JetBrains Mono',ui-monospace,'SF Mono','Fira Code',monospace;--red:#ef4444;--red-bg:rgba(239,68,68,.05)}
 body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#f5f5f5;color:#222}
 header{background:#1a1a2e;color:#eee;padding:1rem 2rem;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.5rem}
 header h1{margin:0;font-size:1.4rem}
@@ -19,17 +22,24 @@ header a:hover{text-decoration:underline}
 .toolbar select{border:1px solid #ccc;border-radius:4px;padding:.3rem .5rem;font-size:.8rem;background:#fff}
 .toolbar button{background:#3b82f6;color:#fff;border:none;border-radius:4px;padding:.35rem .9rem;font-size:.8rem;cursor:pointer}
 .toolbar button:hover{background:#2563eb}
-.live-dot{width:8px;height:8px;border-radius:50%;background:#10b981;display:inline-block;margin-right:.35rem;animation:pulse 1.5s infinite}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.live-dot{width:8px;height:8px;border-radius:50%;background:#10b981;display:inline-block;margin-right:.35rem;animation:live-pulse 1.5s ease-in-out infinite}
+@keyframes live-pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.72)}}
 .live-dot.paused{background:#aaa;animation:none}
 .refresh-status{font-size:.78rem;color:#888}
 main{max-width:1350px;margin:1.5rem auto;padding:0 1.5rem}
 .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:.75rem;margin-bottom:1.5rem}
-.card{background:#fff;border-radius:8px;padding:.9rem 1.1rem;box-shadow:0 1px 3px rgba(0,0,0,.1)}
+.card{background:#fff;border-radius:8px;padding:.9rem 1.1rem;box-shadow:0 1px 3px rgba(0,0,0,.1);border-left:3px solid transparent}
 .card .label{font-size:.7rem;text-transform:uppercase;color:#888;margin-bottom:.25rem}
-.card .value{font-size:1.5rem;font-weight:700}
-.card.warn .value{color:#c0392b}
+.card .value{font-size:1.5rem;font-weight:700;font-family:var(--fn)}
+.card.warn{border-left:3px solid var(--red)}
+.card.warn .value{color:var(--red)}
 .card .note{font-size:.65rem;color:#aaa;margin-top:.15rem}
+.num{font-family:var(--fn)}
+.limit-row td{background:var(--red-bg)!important;box-shadow:inset 3px 0 0 var(--red)}
+.limit-row:hover td{background:rgba(239,68,68,.08)!important}
+/* inline token progress bar */
+.bar-wrap{margin-top:3px;height:4px;background:#f0f0f0;border-radius:2px}
+.bar-fill{height:100%;border-radius:2px;transition:width .3s ease;background:rgba(59,130,246,.55)}
 .section{background:#fff;border-radius:8px;padding:1.2rem 1.5rem;box-shadow:0 1px 3px rgba(0,0,0,.1);margin-bottom:1.5rem}
 .section h2{margin:0 0 .9rem;font-size:.95rem;color:#555;display:flex;align-items:center;gap:.5rem;flex-wrap:wrap}
 .section h2 .badge{font-size:.7rem;background:#e5e7eb;color:#555;padding:.1rem .45rem;border-radius:10px;font-weight:500}
@@ -48,7 +58,7 @@ tr.hour-row td{font-size:.78rem}
 tr.hour-row.has-limit td{color:#c0392b;font-weight:500}
 tr.hour-row:hover td{background:#f0f7ff;cursor:pointer}
 /* tags */
-.tag{display:inline-block;padding:.1rem .4rem;border-radius:4px;font-size:.65rem;font-weight:600;text-transform:uppercase}
+.tag{display:inline-block;padding:.1rem .4rem;border-radius:4px;font-size:.65rem;font-weight:600;text-transform:uppercase;font-family:var(--fn)}
 .tag.hard_limit,.tag.quota_limit{background:#fde8e8;color:#c0392b}
 .tag.rate_limit{background:#fef3cd;color:#856404}
 .tag.temporary_capacity{background:#e2e8f0;color:#475569}
@@ -436,17 +446,21 @@ function renderBucketTable(hourly, limits, isHourView, hourNum){
   const activeBuckets=allBuckets.filter(b=>hmap[b]||limitBuckets.has(b));
   if(!activeBuckets.length){qs('hourlyBody').innerHTML='<tr><td colspan="7" class="no-data">No activity.</td></tr>';return;}
 
+  const maxTok=Math.max(1,...activeBuckets.map(b=>(hmap[b]||{}).known_tokens||0));
   qs('hourlyBody').innerHTML=activeBuckets.map(b=>{
     const r=hmap[b]||{};
     const hasLim=limitBuckets.has(b);
-    const tok=r.known_tokens>0?fmtNum(r.known_tokens):'—';
+    const pct=Math.round((r.known_tokens||0)/maxTok*100);
+    const tok=r.known_tokens>0
+      ?`<span class="num">${fmtNum(r.known_tokens)}</span><div class="bar-wrap"><div class="bar-fill" style="width:${pct}%"></div></div>`
+      :'—';
     const estTok=r.estimated_tokens>0?`<span class="est">~${fmtNum(r.estimated_tokens)}</span>`:'—';
     const onclick=!isHourView?`onclick="window.location='${hourUrl(b)}'"` :`onclick="highlightBucketRow(${b})"`;
     return`<tr class="hour-row${hasLim?' has-limit':''}" data-bucket="${b}" ${onclick}>
-      <td>${label(b)}</td>
-      <td>${r.user_messages||'—'}</td>
-      <td>${r.assistant_messages||'—'}</td>
-      <td>${r.tool_calls||'—'}</td>
+      <td class="num">${label(b)}</td>
+      <td class="num">${r.user_messages||'—'}</td>
+      <td class="num">${r.assistant_messages||'—'}</td>
+      <td class="num">${r.tool_calls||'—'}</td>
       <td>${tok}</td>
       <td>${estTok}</td>
       <td>${hasLim?`<span class="tag hard_limit">${(hmap[b]||{}).limit_events||'!'}</span>`:'—'}</td>
@@ -496,12 +510,12 @@ function renderSessions(){
   qs('sessFilterStatus').textContent=search?`${rows.length} of ${allSessions.length} shown`:'';
 
   const dayBackUrl=encodeURIComponent(window.location.href);
-  qs('sessionsBody').innerHTML=rows.map(s=>`<tr onclick="window.location='/session?id=${s.id}&back=${dayBackUrl}'" style="cursor:pointer">
-    <td style="white-space:nowrap">${s.started_at?s.started_at.slice(11,19):'—'}</td>
-    <td>${fmtDur(s.duration_seconds)}</td>
-    <td>${s.user_message_count||0}</td>
-    <td>${s.assistant_message_count||0}</td>
-    <td>${s.tool_call_count||0}</td>
+  qs('sessionsBody').innerHTML=rows.map(s=>`<tr class="${s.limit_event_count>0?'limit-row':''}" onclick="window.location='/session?id=${s.id}&back=${dayBackUrl}'" style="cursor:pointer">
+    <td class="num" style="white-space:nowrap">${s.started_at?s.started_at.slice(11,19):'—'}</td>
+    <td class="num">${fmtDur(s.duration_seconds)}</td>
+    <td class="num">${s.user_message_count||0}</td>
+    <td class="num">${s.assistant_message_count||0}</td>
+    <td class="num">${s.tool_call_count||0}</td>
     <td>${fmtTok(s)}</td>
     <td>${s.limit_event_count>0?`<span class="tag hard_limit">${s.limit_event_count}</span>`:'—'}</td>
     <td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.75rem;color:#555" title="${esc(s.project_path)}">${esc(s.project_path||'—')}</td>

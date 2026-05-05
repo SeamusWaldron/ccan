@@ -4,8 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Claude Code Usage — Project Detail</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box}
+:root{
+  --fn:'JetBrains Mono',ui-monospace,'SF Mono','Fira Code',monospace;
+  --red:#ef4444;--red-bg:rgba(239,68,68,.05);
+}
 body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#f5f5f5;color:#222}
 header{background:#1a1a2e;color:#eee;padding:1rem 2rem;display:flex;justify-content:space-between;align-items:flex-start}
 header>div:first-child{flex:1}
@@ -20,10 +26,11 @@ header>a:hover{text-decoration:underline}
 .toolbar button:hover{background:#2563eb}
 main{max-width:1400px;margin:1.5rem auto;padding:0 1.5rem}
 .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:.75rem;margin-bottom:1.5rem}
-.card{background:#fff;border-radius:8px;padding:1rem 1.25rem;box-shadow:0 1px 3px rgba(0,0,0,.1)}
-.card .label{font-size:.7rem;text-transform:uppercase;color:#888;margin-bottom:.3rem}
-.card .value{font-size:1.6rem;font-weight:700}
-.card.warn .value{color:#c0392b}
+.card{background:#fff;border-radius:8px;padding:1rem 1.25rem;box-shadow:0 1px 3px rgba(0,0,0,.1);border-left:3px solid transparent}
+.card .label{font-size:.7rem;text-transform:uppercase;color:#888;margin-bottom:.3rem;letter-spacing:.04em}
+.card .value{font-size:1.6rem;font-weight:700;font-family:var(--fn)}
+.card.warn{border-left-color:var(--red)}
+.card.warn .value{color:var(--red)}
 .card .note{font-size:.65rem;color:#aaa;margin-top:.2rem}
 .chart-section{background:#fff;border-radius:8px;padding:1.25rem 1.5rem;box-shadow:0 1px 3px rgba(0,0,0,.1);margin-bottom:1.5rem}
 .chart-section h2{margin:0 0 .75rem;font-size:.95rem;color:#555}
@@ -33,14 +40,19 @@ main{max-width:1400px;margin:1.5rem auto;padding:0 1.5rem}
 table{width:100%;border-collapse:collapse;font-size:.8rem}
 th,td{padding:.5rem .6rem;text-align:left;border-bottom:1px solid #eee}
 th{background:#f9f9f9;font-weight:600;color:#555}
-tr[onclick]:hover td{background:#f0f7ff}
-.tag{display:inline-block;padding:.1rem .4rem;border-radius:4px;font-size:.65rem;font-weight:600;text-transform:uppercase}
+tr[onclick]:hover td{background:#f0f7ff;cursor:pointer}
+.limit-row td{background:var(--red-bg)!important;box-shadow:inset 3px 0 0 var(--red)}
+.limit-row:hover td{background:rgba(239,68,68,.08)!important}
+.num{font-family:var(--fn)}
+.est{color:#aaa;font-style:italic;font-family:var(--fn)}
+.tag{display:inline-block;padding:.1rem .4rem;border-radius:4px;font-size:.65rem;font-weight:600;text-transform:uppercase;font-family:var(--fn)}
 .tag.hard_limit{background:#fde8e8;color:#c0392b}
 .tag.rate_limit{background:#fef3cd;color:#856404}
 .tag.quota_limit{background:#fde8e8;color:#c0392b}
 .tag.temporary_capacity{background:#e2e8f0;color:#475569}
 .tag.unknown_limit{background:#f1f5f9;color:#64748b}
-.est{color:#aaa;font-style:italic}
+.bar-wrap{margin-top:3px;height:4px;background:#f0f0f0;border-radius:2px;min-width:40px}
+.bar-fill{height:100%;border-radius:2px;transition:width .3s ease;background:rgba(59,130,246,.6)}
 footer{text-align:center;padding:1.5rem;font-size:.7rem;color:#bbb}
 </style>
 </head>
@@ -115,8 +127,8 @@ function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace
 function fmtDur(s){if(!s)return'—';const m=Math.floor(s/60),sec=s%60;return m>0?m+'m '+sec+'s':sec+'s'}
 function fmtNum(n){return n?n.toLocaleString():'0'}
 function fmtTok(s){
-  if(s.known_total_tokens>0)return fmtNum(s.known_total_tokens);
-  if(s.estimated_total_tokens>0)return '<span class="est">~'+fmtNum(s.estimated_total_tokens)+'</span>';
+  if(s.known_total_tokens>0)return`<span class="num">${fmtNum(s.known_total_tokens)}</span>`;
+  if(s.estimated_total_tokens>0)return`<span class="est">~${fmtNum(s.estimated_total_tokens)}</span>`;
   return '—';
 }
 
@@ -211,7 +223,7 @@ function renderCards(s){
     ['Assistant messages',fmtNum(s.assistant_messages),''],
     ['Tool calls',fmtNum(s.tool_calls),''],
     ['Known tokens',fmtNum(s.known_total_tokens),''],
-    ['Est. tokens','<span class="est">'+fmtNum(s.estimated_total_tokens)+'</span>','Estimated (chars/4)',''],
+    ['Est. tokens',fmtNum(s.estimated_total_tokens),'Estimated (chars/4)',''],
     ['Limit events',fmtNum(s.limit_events),'',s.limit_events>0?'warn':''],
   ].map(([l,v,n,cls])=>`<div class="card ${cls||''}"><div class="label">${l}</div><div class="value">${v}</div>${n?'<div class="note">'+n+'</div>':''}</div>`).join('');
 }
@@ -223,12 +235,12 @@ function renderCharts(daily){
     if(!canvas)return;
     const existing=Chart.getChart(canvas);
     if(existing)existing.destroy();
+    const projID=getProjectID();
+    const back=encodeURIComponent(window.location.href);
     const chartOpts={responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{position:'top'},tooltip:{callbacks:{footer:()=>['Click to open day view']}}},scales:{y:{beginAtZero:true}},...opts,onClick:(evt,elements)=>{
       if(elements.length>0){
         const idx=elements[0].index;
         const date=labels[idx];
-        const projID=getProjectID();
-        const back=encodeURIComponent(window.location.href);
         window.location='/day?date='+date+(projID?'&project_id='+projID:'')+'&back='+back;
       }
     }};
@@ -246,24 +258,30 @@ function renderCharts(daily){
 function renderSessions(sessions){
   const tb=qs('sessionsBody');
   if(!tb)return;
-  tb.innerHTML=(sessions||[]).map(s=>`<tr style="cursor:pointer" onclick="window.location='/session?id=${s.id}&back='+encodeURIComponent(window.location.href)">
-    <td>${s.started_at?s.started_at.slice(0,19).replace('T',' '):'—'}</td>
-    <td>${fmtDur(s.duration_seconds)}</td>
-    <td>${s.user_message_count}</td><td>${s.assistant_message_count}</td>
-    <td>${s.tool_call_count}</td><td>${fmtTok(s)}</td>
-    <td>${s.limit_event_count>0?'<span class="tag hard_limit">'+s.limit_event_count+'</span>':'—'}</td>
-  </tr>`).join('')||'<tr><td colspan="7" style="color:#aaa">No sessions.</td></tr>';
+  const maxTok=Math.max(1,...sessions.map(s=>s.known_total_tokens||0));
+  tb.innerHTML=(sessions||[]).map(s=>{
+    const hasLim=s.limit_event_count>0;
+    const pct=Math.round((s.known_total_tokens||0)/maxTok*100);
+    return`<tr class="${hasLim?'limit-row':''}" style="cursor:pointer" onclick="window.location='/session?id=${s.id}&back='+encodeURIComponent(window.location.href)">
+      <td class="num" style="font-size:.75rem">${s.started_at?s.started_at.slice(0,19).replace('T',' '):'—'}</td>
+      <td class="num">${fmtDur(s.duration_seconds)}</td>
+      <td class="num">${s.user_message_count}</td><td class="num">${s.assistant_message_count}</td>
+      <td class="num">${s.tool_call_count}</td>
+      <td>${s.known_total_tokens>0?`<span class="num">${fmtNum(s.known_total_tokens)}</span><div class="bar-wrap"><div class="bar-fill" style="width:${pct}%"></div></div>`:fmtTok(s)}</td>
+      <td>${hasLim?'<span class="tag hard_limit">'+s.limit_event_count+'</span>':'—'}</td>
+    </tr>`;
+  }).join('')||'<tr><td colspan="7" style="color:#aaa">No sessions.</td></tr>';
 }
 
 function renderLimits(limits){
   const tb=qs('limitsBody');
   if(!tb)return;
   const projBackUrl=encodeURIComponent(window.location.href);
-  tb.innerHTML=(limits||[]).map(l=>`<tr style="${l.session_id?'cursor:pointer':''}" ${l.session_id?`onclick="window.location='/session?sid=${encodeURIComponent(l.session_id)}&highlight=limit&back=${projBackUrl}'"`:''}>
-    <td>${l.timestamp?l.timestamp.slice(0,19).replace('T',' '):'—'}</td>
+  tb.innerHTML=(limits||[]).map(l=>`<tr class="limit-row" style="${l.session_id?'cursor:pointer':''}" ${l.session_id?`onclick="window.location='/session?sid=${encodeURIComponent(l.session_id)}&highlight=limit&back=${projBackUrl}'"`:''}>
+    <td class="num" style="font-size:.75rem">${l.timestamp?l.timestamp.slice(0,19).replace('T',' '):'—'}</td>
     <td><span class="tag ${l.classification}">${l.classification}</span></td>
     <td>${esc(l.matched_pattern)}</td>
-    <td>${(l.confidence*100).toFixed(0)}%</td>
+    <td class="num">${(l.confidence*100).toFixed(0)}%</td>
     <td style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(l.redacted_excerpt)}">${esc(l.redacted_excerpt)}</td>
   </tr>`).join('')||'<tr><td colspan="5" style="color:#aaa">No limit events detected.</td></tr>';
 }
