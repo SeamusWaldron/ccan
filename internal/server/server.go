@@ -221,6 +221,7 @@ type projectRow struct {
 }
 
 func (s *Server) handleProjects(w http.ResponseWriter, r *http.Request) {
+	since, until := dateFilters(r)
 	rows, err := s.db.Query(`
 		SELECT p.id, p.encoded_path, COALESCE(p.decoded_path_guess,''),
 		       COUNT(s.id),
@@ -231,8 +232,10 @@ func (s *Server) handleProjects(w http.ResponseWriter, r *http.Request) {
 		       COALESCE(SUM(s.limit_event_count),0)
 		FROM projects p
 		LEFT JOIN sessions s ON s.project_id = p.id
+		WHERE (? = '' OR s.started_at >= ?) AND (? = '' OR s.started_at <= ?)
 		GROUP BY p.id
-		ORDER BY MAX(s.ended_at) DESC`)
+		ORDER BY MAX(s.ended_at) DESC`,
+		since, since, until, until)
 	if err != nil {
 		jsonErr(w, err)
 		return
