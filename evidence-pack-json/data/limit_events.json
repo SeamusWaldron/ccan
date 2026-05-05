@@ -1,0 +1,2034 @@
+[
+  {
+    "Timestamp": "2026-03-14T13:17:29Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "Gemini hit a rate limit — I'll run the research myself instead. Meanwhile, still waiting on your answer about the racing page clippings — is that the full archive or will more come?",
+    "SessionID": "86bef918-ac09-4451-bc6b-e7495be0e5e8"
+  },
+  {
+    "Timestamp": "2026-03-14T13:19:32Z",
+    "Classification": "temporary_capacity",
+    "MatchedPattern": "capacity",
+    "Confidence": 0.4,
+    "RedactedExcerpt": "(The Gemini research agent hit capacity limits again — I'll do the data source research directly when we need it.)\n\nWaiting on your thoughts on the architecture overview above — does that structur…",
+    "SessionID": "86bef918-ac09-4451-bc6b-e7495be0e5e8"
+  },
+  {
+    "Timestamp": "2026-03-14T13:21:27Z",
+    "Classification": "temporary_capacity",
+    "MatchedPattern": "capacity",
+    "Confidence": 0.4,
+    "RedactedExcerpt": "(Research agent keeps hitting Gemini capacity limits — I'll handle data source research directly when we get to implementation.)\n\nWaiting on your thoughts on Section 3 — does the data sourcing and…",
+    "SessionID": "86bef918-ac09-4451-bc6b-e7495be0e5e8"
+  },
+  {
+    "Timestamp": "2026-03-14T13:23:30Z",
+    "Classification": "temporary_capacity",
+    "MatchedPattern": "capacity",
+    "Confidence": 0.4,
+    "RedactedExcerpt": "(Research agent failing repeatedly — Gemini has no capacity today. Not a problem, I'll research directly when we implement.)\n\nWaiting on your thoughts on the RAG layer design.",
+    "SessionID": "86bef918-ac09-4451-bc6b-e7495be0e5e8"
+  },
+  {
+    "Timestamp": "2026-03-14T13:34:43Z",
+    "Classification": "temporary_capacity",
+    "MatchedPattern": "capacity",
+    "Confidence": 0.4,
+    "RedactedExcerpt": "(All Gemini research agents failed — capacity exhausted today. Data source research will happen during implementation.)\n\nReady to move to implementation planning when you've reviewed the spec. Want …",
+    "SessionID": "86bef918-ac09-4451-bc6b-e7495be0e5e8"
+  },
+  {
+    "Timestamp": "2026-03-14T14:08:14Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "Excellent results. Here's the concrete picture:\n\n## How to get HKJC data\n\n**Everything is server-rendered HTML — no JSON API.** We scrape HTML tables. No auth required, no robots.txt found, no CAPTC…",
+    "SessionID": "86bef918-ac09-4451-bc6b-e7495be0e5e8"
+  },
+  {
+    "Timestamp": "2026-03-14T20:04:00Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "Here's the full picture:\n\n**12 commits, 37 source files (Go + Python), 5 test suites all passing.**\n\n**What's built and working:**\n\n| Component | Status | Details |\n|-----------|--------|---------|\n| …",
+    "SessionID": "86bef918-ac09-4451-bc6b-e7495be0e5e8"
+  },
+  {
+    "Timestamp": "2026-03-17T11:22:34Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "Hmm, 24 docs in ~90s. The sequential run was doing ~38 docs/min. This is about the same — the bottleneck might be API rate limits rather than local concurrency. Let me check after a few more minutes…",
+    "SessionID": "c5089502-4f10-4fda-98cb-0743d6f25a77"
+  },
+  {
+    "Timestamp": "2026-03-17T11:24:45Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "~49 docs in ~4 minutes ≈ 12 docs/min. Actually slower than the sequential run (38 docs/min). The concurrent workers are likely hitting API rate limits — both OpenAI and Voyage throttle concurrent …",
+    "SessionID": "c5089502-4f10-4fda-98cb-0743d6f25a77"
+  },
+  {
+    "Timestamp": "2026-03-17T11:28:51Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "Key findings:\n\n- **OpenAI**: 500 RPM at Tiers 1-4, ~8 req/sec max\n- **Voyage**: 2,000 RPM, ~33 req/sec — much more permissive\n- **Bottleneck is OpenAI** at 500 RPM\n\nWith the current approach (1 API …",
+    "SessionID": "c5089502-4f10-4fda-98cb-0743d6f25a77"
+  },
+  {
+    "Timestamp": "2026-03-17T11:31:25Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "12 docs in 2 minutes = 6 docs/min. That's slower than the sequential run was doing (38 docs/min). Let me check if there are errors or rate limit retries in the output:",
+    "SessionID": "c5089502-4f10-4fda-98cb-0743d6f25a77"
+  },
+  {
+    "Timestamp": "2026-03-17T11:34:47Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "52 docs / 88 sections in ~5 minutes = ~10 docs/min, ~18 sections/min. With 3 embeddings per section, that's ~54 API calls/min — well within rate limits.\n\nCompared to the first sequential run (38 doc…",
+    "SessionID": "c5089502-4f10-4fda-98cb-0743d6f25a77"
+  },
+  {
+    "Timestamp": "2026-03-17T11:39:08Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "Here's what I found. The infrastructure for batch embedding already exists:\n\n1. **OpenAI `GetEmbedding`** already sends `Input: []string{text}` — it's a batch API call but with only 1 text. OpenAI s…",
+    "SessionID": "c5089502-4f10-4fda-98cb-0743d6f25a77"
+  },
+  {
+    "Timestamp": "2026-03-19T07:39:39Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "5 summaries in ~7 minutes total (including clustering time). So roughly 1 summary per minute with 4 workers. At 1,206 clusters, the L1 summaries alone will take ~20 hours. The multi-model embedding ca…",
+    "SessionID": "c5089502-4f10-4fda-98cb-0743d6f25a77"
+  },
+  {
+    "Timestamp": "2026-03-19T08:35:52Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "Both running in parallel — FinQA (`b1eq73j4u`) and LegalBench (`btfr9cdqe`), each with 8 workers. Combined that's 16 concurrent LLM calls which is within the rate limits (we're at ~96% TPM capacity …",
+    "SessionID": "c5089502-4f10-4fda-98cb-0743d6f25a77"
+  },
+  {
+    "Timestamp": "2026-03-19T10:44:11Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "Three things that would make a big difference:\n\n**1. Use local Qwen for summarisation (biggest win)**\n\nYour Mac Mini has LM Studio running Qwen 2.5 7B on port 1234. RAPTOR summaries are straightforwar…",
+    "SessionID": "c5089502-4f10-4fda-98cb-0743d6f25a77"
+  },
+  {
+    "Timestamp": "2026-03-20T09:57:59Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "Running with gpt-4o-mini and 8 workers (within rate limits). Compression tiers will keep it under context limits. I'll let you know when it completes.",
+    "SessionID": "c5089502-4f10-4fda-98cb-0743d6f25a77"
+  },
+  {
+    "Timestamp": "2026-03-22T08:14:38Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "Hitting rate limits on the RAG API (429). It's still progressing though — at 30/50 on one of the modes. The benchmark is running through multiple embedding models (openai + voyage) and evaluation mo…",
+    "SessionID": "c5089502-4f10-4fda-98cb-0743d6f25a77"
+  },
+  {
+    "Timestamp": "2026-03-22T08:25:00Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "**First benchmark results for NarrativeQA.** Here's what we're seeing:\n\n| Mode | Model | Eval | F1 | Rouge-L | Contains | Tokens | Latency | N |\n|------|-------|------|---:|--------:|---------:|------…",
+    "SessionID": "c5089502-4f10-4fda-98cb-0743d6f25a77"
+  },
+  {
+    "Timestamp": "2026-03-22T08:35:17Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "Running — **run_id 21**, 1,500 QA pairs, started on `full_text / openai / full_rag`. With retry logic on 429s now.\n\nAt ~2s per query × 1,500 pairs × 12 evaluation modes (2 text × 3 embedding × 2…",
+    "SessionID": "c5089502-4f10-4fda-98cb-0743d6f25a77"
+  },
+  {
+    "Timestamp": "2026-03-22T08:49:20Z",
+    "Classification": "quota_limit",
+    "MatchedPattern": "quota exceeded",
+    "Confidence": 1,
+    "RedactedExcerpt": "It worked with Claude only (OpenAI key is an unexpanded env var, Gemini quota exceeded). Two issues to fix:\n\n1. **OpenAI**: The `${OPENAI_API_KEY}` env var isn't being expanded — the `ExpandEnvVars`…",
+    "SessionID": "bb61e5b8-e58c-457d-b230-f075a7c733be"
+  },
+  {
+    "Timestamp": "2026-03-22T09:05:24Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "**1,090/1,500** on the first evaluation mode (`full_text / openai / full_rag`). ~73% through the first of ~12 modes. No rate limit retries visible in the log — the retry logic is handling them clean…",
+    "SessionID": "c5089502-4f10-4fda-98cb-0743d6f25a77"
+  },
+  {
+    "Timestamp": "2026-03-22T09:08:54Z",
+    "Classification": "quota_limit",
+    "MatchedPattern": "quota exceeded",
+    "Confidence": 1,
+    "RedactedExcerpt": "Now we have **two-way consensus** — OpenAI and Claude both agree on all structured fields (2/2). Gemini gracefully degraded. \n\n- birth_date: 1952-03-11 (2/2 agree)\n- death_date: 2001-05-11 (2/2 agre…",
+    "SessionID": "bb61e5b8-e58c-457d-b230-f075a7c733be"
+  },
+  {
+    "Timestamp": "2026-03-22T10:16:54Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "All 4 running. Rate limits are being hit (4 parallel benchmarks hammering the API) but the retry logic is handling them — backing off and retrying automatically.\n\nWhen you're back this afternoon, ru…",
+    "SessionID": "c5089502-4f10-4fda-98cb-0743d6f25a77"
+  },
+  {
+    "Timestamp": "2026-03-22T15:40:20Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "14,928 rate limit retries — that's a lot. The 4 parallel benchmarks are overwhelming the RAG API. Let me check actual progress:",
+    "SessionID": "c5089502-4f10-4fda-98cb-0743d6f25a77"
+  },
+  {
+    "Timestamp": "2026-03-22T15:40:36Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "All 4 are progressing in parallel despite the rate limits:\n\n| Run | Dataset | Progress | Mode |\n|----:|---------|----------|------|\n| 23 | NarrativeQA (1,500) | 450/1500 | ~mode 4-5 of 12 |\n| 25 | Fin…",
+    "SessionID": "c5089502-4f10-4fda-98cb-0743d6f25a77"
+  },
+  {
+    "Timestamp": "2026-03-22T16:55:42Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "Now I need to:\n1. Add rate limiting to the benchmark runner\n2. Build a Linux ARM64 binary\n3. Create a Dockerfile and add to docker-compose\n4. Add the harness DB to the existing postgres container\n\nLet…",
+    "SessionID": "c5089502-4f10-4fda-98cb-0743d6f25a77"
+  },
+  {
+    "Timestamp": "2026-03-22T16:56:02Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "Now add the rate limiter to `queryRAG`:",
+    "SessionID": "c5089502-4f10-4fda-98cb-0743d6f25a77"
+  },
+  {
+    "Timestamp": "2026-03-22T16:56:27Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "Now update the benchmark runner creation to use the rate limit:",
+    "SessionID": "c5089502-4f10-4fda-98cb-0743d6f25a77"
+  },
+  {
+    "Timestamp": "2026-03-22T16:58:53Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "Running on the Mac Mini with 5 qps rate limit. Now start all 4 benchmarks:",
+    "SessionID": "c5089502-4f10-4fda-98cb-0743d6f25a77"
+  },
+  {
+    "Timestamp": "2026-03-22T16:59:15Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "All 4 running on the Mac Mini now — zero network hops between harness and RAG API (both in Docker, same network). Rate limited to 5 qps to avoid overwhelming the API.\n\n| Run | Dataset | QA Pairs |\n|…",
+    "SessionID": "c5089502-4f10-4fda-98cb-0743d6f25a77"
+  },
+  {
+    "Timestamp": "2026-03-22T17:19:10Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "Still hitting rate limits even at 5 qps — 4 parallel runners × 5 qps = 20 qps total hitting the API. The rate limiter is per-runner, not global. But the retries are working (attempt 1-2, backing of…",
+    "SessionID": "c5089502-4f10-4fda-98cb-0743d6f25a77"
+  },
+  {
+    "Timestamp": "2026-03-22T18:08:43Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "All 4 running in parallel:\n\n| Run | Dataset | Progress | Mode | Est % |\n|----:|---------|----------|------|------:|\n| 31 | NarrativeQA (1,500) | 20/1,500 | mode 2: retrieval_only | ~8% |\n| 33 | FinQA …",
+    "SessionID": "c5089502-4f10-4fda-98cb-0743d6f25a77"
+  },
+  {
+    "Timestamp": "2026-03-22T21:36:42Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "All 4 are progressing through the evaluation matrix:\n\n| Run | Dataset | Current Mode | Progress |\n|----:|---------|-------------|----------|\n| 31 | NarrativeQA (1,500) | full_text / voyage-3 / full_ra…",
+    "SessionID": "c5089502-4f10-4fda-98cb-0743d6f25a77"
+  },
+  {
+    "Timestamp": "2026-03-23T06:29:33Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "Wave 3 has problems. Many experts have sections but **0 embeddings, 0 entities, 0 mentions**. And some expected experts are missing (Nelson Mandela, Oppenheimer). The embedding phase is failing — li…",
+    "SessionID": "c5089502-4f10-4fda-98cb-0743d6f25a77"
+  },
+  {
+    "Timestamp": "2026-03-23T08:57:55Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "| Workstream | Status |\n|-----------|--------|\n| **RAPTOR** | 16/52 — on Moby Dick, small experts done (0-6 nodes each) |\n| **Wave 4 ingest** | 3/13 — carwow embedding in progress (3,656 sections)…",
+    "SessionID": "c5089502-4f10-4fda-98cb-0743d6f25a77"
+  },
+  {
+    "Timestamp": "2026-03-23T09:43:39Z",
+    "Classification": "temporary_capacity",
+    "MatchedPattern": "capacity",
+    "Confidence": 0.4,
+    "RedactedExcerpt": "This is a goldmine for combining with Quadra. Here's what I see:\n\n## The Opportunity: Predictive Planning Intelligence\n\nInsightOne already has the **operational data** (what happened). Quadra has the …",
+    "SessionID": "59692712-6fa1-44ca-9256-3893932587a3"
+  },
+  {
+    "Timestamp": "2026-03-23T12:38:08Z",
+    "Classification": "temporary_capacity",
+    "MatchedPattern": "overloaded",
+    "Confidence": 0.6,
+    "RedactedExcerpt": "Here's my proposal. The Durham application is ideal — 43 detailed objections about a 34-home development on countryside land.\n\n## The Core Innovation: Data-Validated Concerns\n\nThe product's differen…",
+    "SessionID": "59692712-6fa1-44ca-9256-3893932587a3"
+  },
+  {
+    "Timestamp": "2026-03-23T13:15:34Z",
+    "Classification": "temporary_capacity",
+    "MatchedPattern": "overloaded",
+    "Confidence": 0.6,
+    "RedactedExcerpt": "\n\nYes — that's the whole point. Right now we show \"this is what the area looks like today.\" But the real question is **\"what will it look like AFTER 34 homes are built?\"**\n\nThe before/after should s…",
+    "SessionID": "59692712-6fa1-44ca-9256-3893932587a3"
+  },
+  {
+    "Timestamp": "2026-03-23T13:31:43Z",
+    "Classification": "temporary_capacity",
+    "MatchedPattern": "overloaded",
+    "Confidence": 0.6,
+    "RedactedExcerpt": "The problem is the `direction` field is overloaded with two different meanings:\n\n1. For **validation**: \"high value supports the concern\" (flood risk high = bad, greenspace high = ecologically valuabl…",
+    "SessionID": "59692712-6fa1-44ca-9256-3893932587a3"
+  },
+  {
+    "Timestamp": "2026-03-23T13:46:26Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "\n\nThat's a question with several dimensions. Let me think through it honestly based on what I know about the codebase, the architecture, and what \"practical completion\" means in different scenarios.\n\n…",
+    "SessionID": "d260491e-ac62-49d5-8c82-4a2705829608"
+  },
+  {
+    "Timestamp": "2026-03-24T07:54:03Z",
+    "Classification": "temporary_capacity",
+    "MatchedPattern": "capacity",
+    "Confidence": 0.4,
+    "RedactedExcerpt": "\n\nYou're right — \"+21 school places\" reads as positive (more places!) when it actually means 21 MORE children needing places that don't exist. The number itself is neutral — it's the **impact on e…",
+    "SessionID": "59692712-6fa1-44ca-9256-3893932587a3"
+  },
+  {
+    "Timestamp": "2026-03-24T08:19:47Z",
+    "Classification": "temporary_capacity",
+    "MatchedPattern": "capacity",
+    "Confidence": 0.4,
+    "RedactedExcerpt": "Refresh. Two changes:\n\n1. **Similar areas** — now a responsive grid (6 cards across on desktop, 3 on tablet, 2 on mobile). No scrolling. All visible at once, with \"This Area\" first in indigo.\n\n2. **…",
+    "SessionID": "59692712-6fa1-44ca-9256-3893932587a3"
+  },
+  {
+    "Timestamp": "2026-03-24T12:29:29Z",
+    "Classification": "temporary_capacity",
+    "MatchedPattern": "capacity",
+    "Confidence": 0.4,
+    "RedactedExcerpt": "A single model trained across all councils, with council identity as a feature — not separate models per council. Here's why.\n\n**What's universal across all councils:**\n- NPPF is national law — fl…",
+    "SessionID": "59692712-6fa1-44ca-9256-3893932587a3"
+  },
+  {
+    "Timestamp": "2026-03-24T18:00:19Z",
+    "Classification": "temporary_capacity",
+    "MatchedPattern": "capacity",
+    "Confidence": 0.4,
+    "RedactedExcerpt": "\n\nAll four reviews complete. Here's the consolidated report.\n\n---\n\n## Coverage Summary\n\n**57/68 items fully implemented (84%). 6 items exceed the plan. 5 partial. 5 missing.**\n\n---\n\n## Plan Compliance…",
+    "SessionID": "d260491e-ac62-49d5-8c82-4a2705829608"
+  },
+  {
+    "Timestamp": "2026-03-24T18:24:55Z",
+    "Classification": "temporary_capacity",
+    "MatchedPattern": "capacity",
+    "Confidence": 0.4,
+    "RedactedExcerpt": "**12 commits** for the search engine implementation, all building clean. The final fix commit addressed all 17 review findings:\n\n| Category | Items Fixed |\n|----------|------------|\n| Critical | Conve…",
+    "SessionID": "d260491e-ac62-49d5-8c82-4a2705829608"
+  },
+  {
+    "Timestamp": "2026-03-26T13:19:57Z",
+    "Classification": "temporary_capacity",
+    "MatchedPattern": "capacity",
+    "Confidence": 0.4,
+    "RedactedExcerpt": "Now these are **empirically grounded predictions.** The story they tell:\n\n**Improvements (correlates with development):**\n- Public Transport: 8% → 17% (+9) — areas that get developed tend to have/…",
+    "SessionID": "59692712-6fa1-44ca-9256-3893932587a3"
+  },
+  {
+    "Timestamp": "2026-03-27T10:43:03Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "## The Traitors — AI Social Deduction Game Simulation\n\n**Principal Architect \u0026 Sole Developer** | SedaSoft Ltd. | 2025–2026\n\nDesigned and built a production-deployed AI game simulation that recrea…",
+    "SessionID": "d260491e-ac62-49d5-8c82-4a2705829608"
+  },
+  {
+    "Timestamp": "2026-03-28T06:29:08Z",
+    "Classification": "temporary_capacity",
+    "MatchedPattern": "capacity",
+    "Confidence": 0.4,
+    "RedactedExcerpt": "\n\nBased on what we've built, here are the concrete improvements ranked by impact:\n\n**1. Proposal text features (highest impact, we have the data)**\n\nWe're not using the actual proposal text at all. Th…",
+    "SessionID": "59692712-6fa1-44ca-9256-3893932587a3"
+  },
+  {
+    "Timestamp": "2026-03-28T06:29:12Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "API Error: Rate limit reached",
+    "SessionID": "bb61e5b8-e58c-457d-b230-f075a7c733be"
+  },
+  {
+    "Timestamp": "2026-03-28T06:32:17Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "Rate limited. Let me retry in a moment:",
+    "SessionID": "d260491e-ac62-49d5-8c82-4a2705829608"
+  },
+  {
+    "Timestamp": "2026-03-28T06:33:24Z",
+    "Classification": "temporary_capacity",
+    "MatchedPattern": "overloaded",
+    "Confidence": 0.6,
+    "RedactedExcerpt": "Good — I now have the full picture. This is a large scope covering 6 independent improvement areas. Given the scale, I should present the design as one comprehensive spec but with clear phase bounda…",
+    "SessionID": "59692712-6fa1-44ca-9256-3893932587a3"
+  },
+  {
+    "Timestamp": "2026-03-28T17:07:08Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "API Error: Rate limit reached",
+    "SessionID": "59692712-6fa1-44ca-9256-3893932587a3"
+  },
+  {
+    "Timestamp": "2026-03-28T17:07:37Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "API Error: Rate limit reached",
+    "SessionID": "bb61e5b8-e58c-457d-b230-f075a7c733be"
+  },
+  {
+    "Timestamp": "2026-03-28T17:07:41Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "API Error: Rate limit reached",
+    "SessionID": "d260491e-ac62-49d5-8c82-4a2705829608"
+  },
+  {
+    "Timestamp": "2026-03-28T22:41:00Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "API Error: Rate limit reached",
+    "SessionID": "d260491e-ac62-49d5-8c82-4a2705829608"
+  },
+  {
+    "Timestamp": "2026-03-28T22:45:50Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "API Error: Rate limit reached",
+    "SessionID": "59692712-6fa1-44ca-9256-3893932587a3"
+  },
+  {
+    "Timestamp": "2026-03-29T04:57:38Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "API Error: Rate limit reached",
+    "SessionID": "bb61e5b8-e58c-457d-b230-f075a7c733be"
+  },
+  {
+    "Timestamp": "2026-03-29T04:57:39Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "API Error: Rate limit reached",
+    "SessionID": "d260491e-ac62-49d5-8c82-4a2705829608"
+  },
+  {
+    "Timestamp": "2026-03-29T04:57:44Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "API Error: Rate limit reached",
+    "SessionID": "59692712-6fa1-44ca-9256-3893932587a3"
+  },
+  {
+    "Timestamp": "2026-03-29T12:45:25Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "API Error: Rate limit reached",
+    "SessionID": "86bef918-ac09-4451-bc6b-e7495be0e5e8"
+  },
+  {
+    "Timestamp": "2026-03-30T10:13:26Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "Now I have the complete picture. The IDOX portal structure is:\n\n- **10 comments per page**, paginated with `neighbourCommentsPager.page=N`\n- **129 public comments** for DM/26/00565/FPA\n- Comments show…",
+    "SessionID": "59692712-6fa1-44ca-9256-3893932587a3"
+  },
+  {
+    "Timestamp": "2026-03-30T10:16:09Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "It's working — scraped 118 comments across 11 pages before hitting a 429 (rate limit) on page 12. The 3-second delay isn't enough for Durham's portal. I need to increase the delay and add retry logi…",
+    "SessionID": "59692712-6fa1-44ca-9256-3893932587a3"
+  },
+  {
+    "Timestamp": "2026-03-30T10:19:29Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "**Scraping complete — 137 public comments + 10 consultee comments scraped from Durham's portal in ~2 minutes.** The rate limiter kicked in once on page 12 but the retry logic handled it gracefully (…",
+    "SessionID": "59692712-6fa1-44ca-9256-3893932587a3"
+  },
+  {
+    "Timestamp": "2026-03-30T10:35:44Z",
+    "Classification": "temporary_capacity",
+    "MatchedPattern": "capacity",
+    "Confidence": 0.4,
+    "RedactedExcerpt": "Both — composite from existing signals plus new wellbeing survey data. Got it.\n\nNext question: For the **traffic split into Highways and Traffic Flow** — I want to make sure I understand the disti…",
+    "SessionID": "59692712-6fa1-44ca-9256-3893932587a3"
+  },
+  {
+    "Timestamp": "2026-03-30T10:39:33Z",
+    "Classification": "temporary_capacity",
+    "MatchedPattern": "capacity",
+    "Confidence": 0.4,
+    "RedactedExcerpt": "Good choice. Last question before I design this:\n\nFor the **Highways** metric (road infrastructure quality) — do you have a specific data source in mind, or should I research what's available from o…",
+    "SessionID": "59692712-6fa1-44ca-9256-3893932587a3"
+  },
+  {
+    "Timestamp": "2026-03-30T10:45:52Z",
+    "Classification": "temporary_capacity",
+    "MatchedPattern": "capacity",
+    "Confidence": 0.4,
+    "RedactedExcerpt": "Here's the design, section by section.\n\n---\n\n### Section 1: New PSV Elements\n\n**[29] traffic_flow** (replaces `transport_accessibility`)\n- Sources: DfT journey time statistics (`jts_employment_min`, a…",
+    "SessionID": "59692712-6fa1-44ca-9256-3893932587a3"
+  },
+  {
+    "Timestamp": "2026-03-31T13:18:39Z",
+    "Classification": "temporary_capacity",
+    "MatchedPattern": "capacity",
+    "Confidence": 0.4,
+    "RedactedExcerpt": "Good question. There are several open data sources that would let you model housing type and its downstream impact on council services.\n\n**Housing type/tenure classification:**\n\n| Source | What it tel…",
+    "SessionID": "59692712-6fa1-44ca-9256-3893932587a3"
+  },
+  {
+    "Timestamp": "2026-03-31T13:27:01Z",
+    "Classification": "temporary_capacity",
+    "MatchedPattern": "capacity",
+    "Confidence": 0.4,
+    "RedactedExcerpt": "I've launched a research agent to do a thorough analysis of smart city metric frameworks (ISO 37122, UN SDG 11, EU Smart City Index) and map them to available UK open data. That'll take a few minutes.…",
+    "SessionID": "59692712-6fa1-44ca-9256-3893932587a3"
+  },
+  {
+    "Timestamp": "2026-03-31T13:36:34Z",
+    "Classification": "temporary_capacity",
+    "MatchedPattern": "capacity",
+    "Confidence": 0.4,
+    "RedactedExcerpt": "Spec written. Now let me address your questions about S106/CIL and council service impact by housing band.\n\nYou're absolutely right on both counts — these are powerful differentiators for Quadra.\n\n#…",
+    "SessionID": "59692712-6fa1-44ca-9256-3893932587a3"
+  },
+  {
+    "Timestamp": "2026-03-31T13:37:20Z",
+    "Classification": "temporary_capacity",
+    "MatchedPattern": "capacity",
+    "Confidence": 0.4,
+    "RedactedExcerpt": "This is where Quadra becomes genuinely valuable to councils — not just planning decisions but strategic fiscal intelligence. Here's what you can derive by aggregating across all applications:\n\n### F…",
+    "SessionID": "59692712-6fa1-44ca-9256-3893932587a3"
+  },
+  {
+    "Timestamp": "2026-03-31T13:40:19Z",
+    "Classification": "temporary_capacity",
+    "MatchedPattern": "capacity",
+    "Confidence": 0.4,
+    "RedactedExcerpt": "Exactly. Legislative and regulatory hard limits that no amount of good design can override. These are binary — either you comply or the application cannot be approved.\n\n**Statutory requirements that…",
+    "SessionID": "59692712-6fa1-44ca-9256-3893932587a3"
+  },
+  {
+    "Timestamp": "2026-03-31T14:33:56Z",
+    "Classification": "temporary_capacity",
+    "MatchedPattern": "capacity",
+    "Confidence": 0.4,
+    "RedactedExcerpt": "Starting with Phase A1. Phases A1–A9 are all independent download/parse tasks. I'll dispatch A1, A2, and A3 as the first batch — these are the most critical (Census, Council Finance, Health/Educat…",
+    "SessionID": "59692712-6fa1-44ca-9256-3893932587a3"
+  },
+  {
+    "Timestamp": "2026-03-31T14:43:17Z",
+    "Classification": "temporary_capacity",
+    "MatchedPattern": "capacity",
+    "Confidence": 0.4,
+    "RedactedExcerpt": "Three phases running in parallel:\n- **Phase A2** (Council finance) — downloading DLUHC revenue/CTB/NHB data\n- **Phase A3** (Education \u0026 health) — school capacity, GP workforce, health outcomes\n- *…",
+    "SessionID": "59692712-6fa1-44ca-9256-3893932587a3"
+  },
+  {
+    "Timestamp": "2026-03-31T14:48:57Z",
+    "Classification": "temporary_capacity",
+    "MatchedPattern": "capacity",
+    "Confidence": 0.4,
+    "RedactedExcerpt": "\n\nPhase A3 complete. School capacity has good variation (mean 0.87, meaning schools at 87% capacity on average). GP capacity is using national average fallback — acceptable for now. Health outcomes …",
+    "SessionID": "59692712-6fa1-44ca-9256-3893932587a3"
+  },
+  {
+    "Timestamp": "2026-03-31T14:51:56Z",
+    "Classification": "temporary_capacity",
+    "MatchedPattern": "capacity",
+    "Confidence": 0.4,
+    "RedactedExcerpt": "**Current status — 8 phases in flight:**\n\n| Phase | Status | What |\n|-------|--------|------|\n| A1 | **Done** | Census 2021 (tenure, age, ethnicity, commute, pop change) — 5 parquets |\n| A2 | Runn…",
+    "SessionID": "59692712-6fa1-44ca-9256-3893932587a3"
+  },
+  {
+    "Timestamp": "2026-03-31T14:52:30Z",
+    "Classification": "temporary_capacity",
+    "MatchedPattern": "capacity",
+    "Confidence": 0.4,
+    "RedactedExcerpt": "**Progress update — 4 of 9 download phases complete:**\n\n| Phase | Status | Parquets produced |\n|-------|--------|-------------------|\n| A1 Census | **Done** | 5 (tenure, age, ethnicity, commute, pop…",
+    "SessionID": "59692712-6fa1-44ca-9256-3893932587a3"
+  },
+  {
+    "Timestamp": "2026-03-31T15:02:21Z",
+    "Classification": "temporary_capacity",
+    "MatchedPattern": "capacity",
+    "Confidence": 0.4,
+    "RedactedExcerpt": "\n\nPhase A9 complete. Waste recycling (median 43.7%), renewable energy (2,883 cells with nearby capacity), vacant dwellings all generated.",
+    "SessionID": "59692712-6fa1-44ca-9256-3893932587a3"
+  },
+  {
+    "Timestamp": "2026-03-31T15:08:03Z",
+    "Classification": "temporary_capacity",
+    "MatchedPattern": "capacity",
+    "Confidence": 0.4,
+    "RedactedExcerpt": "**All 9 download/parse phases complete!** Here's the full inventory:\n\n| Phase | Parquets | Key metrics |\n|-------|----------|-------------|\n| A1 Census | 5 | tenure, age dependency, ethnicity, commute…",
+    "SessionID": "59692712-6fa1-44ca-9256-3893932587a3"
+  },
+  {
+    "Timestamp": "2026-03-31T15:20:05Z",
+    "Classification": "temporary_capacity",
+    "MatchedPattern": "capacity",
+    "Confidence": 0.4,
+    "RedactedExcerpt": "Already committed by the subagent. \n\n**Sub-project A is fully complete!** All 10 phases done:\n\n| Phase | Elements added | Status |\n|-------|---------------|--------|\n| A1 Census | 6 (tenure, age, ethn…",
+    "SessionID": "59692712-6fa1-44ca-9256-3893932587a3"
+  },
+  {
+    "Timestamp": "2026-03-31T18:57:52Z",
+    "Classification": "hard_limit",
+    "MatchedPattern": "usage limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "Good. I now have a clear picture. Here's my plan:\n\n---\n\n## What I understand\n\nYou want me to do **4 things in total**:\n\n1. **Complete Sub-projects B, C, D** (S106/CIL, Red Flag, Carbon engines) — th…",
+    "SessionID": "59692712-6fa1-44ca-9256-3893932587a3"
+  },
+  {
+    "Timestamp": "2026-03-31T21:23:52Z",
+    "Classification": "temporary_capacity",
+    "MatchedPattern": "capacity",
+    "Confidence": 0.4,
+    "RedactedExcerpt": "Everything is done except Sub-project E. Here's where we stand:\n\n**Completed today:**\n\n| Component | What was built |\n|-----------|---------------|\n| **PSV v4** | 48→77 columns, 55 active elements a…",
+    "SessionID": "59692712-6fa1-44ca-9256-3893932587a3"
+  },
+  {
+    "Timestamp": "2026-04-01T07:52:26Z",
+    "Classification": "temporary_capacity",
+    "MatchedPattern": "capacity",
+    "Confidence": 0.4,
+    "RedactedExcerpt": "\n\nE4 (Council dashboard) complete. New page at `http://localhost:8080/council-dashboard.html` with fiscal summary, infrastructure capacity, environment, social/digital, and planning pipeline cards. Na…",
+    "SessionID": "59692712-6fa1-44ca-9256-3893932587a3"
+  },
+  {
+    "Timestamp": "2026-04-01T09:04:36Z",
+    "Classification": "temporary_capacity",
+    "MatchedPattern": "capacity",
+    "Confidence": 0.4,
+    "RedactedExcerpt": "Now the numbers are realistic:\n\n- Band D tax: **£1,799** (national average is ~£1,900)\n- Service cost: **£4,004/household** \n- Net fiscal impact: **-£1,495** (councils spend more than they collect…",
+    "SessionID": "59692712-6fa1-44ca-9256-3893932587a3"
+  },
+  {
+    "Timestamp": "2026-04-01T09:34:05Z",
+    "Classification": "temporary_capacity",
+    "MatchedPattern": "capacity",
+    "Confidence": 0.4,
+    "RedactedExcerpt": "There it is — `v * 100`. The API now returns real values (e.g. 82.95 for school capacity), but the JS still multiplies by 100 thinking they're 0-1 fractions. Also GP pressure (1700 patients/GP) isn'…",
+    "SessionID": "59692712-6fa1-44ca-9256-3893932587a3"
+  },
+  {
+    "Timestamp": "2026-04-01T09:34:11Z",
+    "Classification": "temporary_capacity",
+    "MatchedPattern": "capacity",
+    "Confidence": 0.4,
+    "RedactedExcerpt": "Now fix GP capacity — it should show as \"1,700 patients/GP\" not a percentage:",
+    "SessionID": "59692712-6fa1-44ca-9256-3893932587a3"
+  },
+  {
+    "Timestamp": "2026-04-01T09:34:31Z",
+    "Classification": "temporary_capacity",
+    "MatchedPattern": "capacity",
+    "Confidence": 0.4,
+    "RedactedExcerpt": "Refresh the page. You should now see:\n- School Capacity: **83.0%** (not 8295%)\n- GP Capacity: **1,700 pts/GP** (not 170000%)\n- Water Quality: **15.0%**\n- Recycling: **40.1%**\n- Fuel Poverty: **15.0%**…",
+    "SessionID": "59692712-6fa1-44ca-9256-3893932587a3"
+  },
+  {
+    "Timestamp": "2026-04-01T11:22:20Z",
+    "Classification": "temporary_capacity",
+    "MatchedPattern": "capacity",
+    "Confidence": 0.4,
+    "RedactedExcerpt": "\n\nLet me think through this carefully. You're describing a separation of concerns that makes a lot of sense:\n\n**This project (`quadra`)** = the ML engine. It builds models, computes PSV, trains predic…",
+    "SessionID": "59692712-6fa1-44ca-9256-3893932587a3"
+  },
+  {
+    "Timestamp": "2026-04-01T12:25:49Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "All 4 benchmark runs launched:\n\n| Run ID | Dataset | Expert | Sample Size |\n|--------|---------|--------|-------------|\n| 117 | FinQA | 31b2ac98... | 50 |\n| 118 | LegalBench-RAG | 31890d77... | 50 |\n|…",
+    "SessionID": "c5089502-4f10-4fda-98cb-0743d6f25a77"
+  },
+  {
+    "Timestamp": "2026-04-01T12:26:40Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "All 4 benchmark runs are in progress (runs 117-120). Each will process 50 samples with full 4-layer scoring. I'll check progress when the background task completes — should be about 10-15 minutes pe…",
+    "SessionID": "c5089502-4f10-4fda-98cb-0743d6f25a77"
+  },
+  {
+    "Timestamp": "2026-04-01T12:28:55Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "Runs are progressing — looks like they're running sequentially (QASPER is at 20/50, others at 10/50 or 1/50). They share the 5 QPS rate limit to the API server. At this rate, all 4 should complete w…",
+    "SessionID": "c5089502-4f10-4fda-98cb-0743d6f25a77"
+  },
+  {
+    "Timestamp": "2026-04-01T14:39:23Z",
+    "Classification": "temporary_capacity",
+    "MatchedPattern": "capacity",
+    "Confidence": 0.4,
+    "RedactedExcerpt": "Not yet. The current policy detection only does **keyword matching** against comment text — it finds policy references that residents cite in their objections. It doesn't assess whether any of those…",
+    "SessionID": "59692712-6fa1-44ca-9256-3893932587a3"
+  },
+  {
+    "Timestamp": "2026-04-01T14:40:59Z",
+    "Classification": "temporary_capacity",
+    "MatchedPattern": "capacity",
+    "Confidence": 0.4,
+    "RedactedExcerpt": "\n\nThat's a powerful idea. Rather than just detecting what policies are *mentioned*, assess whether the *claims in the comments* would constitute legal blockers *if true*.\n\nFor example:\n- Comment says …",
+    "SessionID": "59692712-6fa1-44ca-9256-3893932587a3"
+  },
+  {
+    "Timestamp": "2026-04-07T08:11:10Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "API Error: Request rejected (429) · Rate limited",
+    "SessionID": "bef81a7a-fd9b-46cc-895c-f96c3d7ba62a"
+  },
+  {
+    "Timestamp": "2026-04-07T17:10:53Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "Progress — we got past HuggingFace (dataset downloaded) and through initial setup. Now we're hitting a 429 rate limit on session creation. The API server has a rate limiter. Let me check:",
+    "SessionID": "c5089502-4f10-4fda-98cb-0743d6f25a77"
+  },
+  {
+    "Timestamp": "2026-04-07T17:11:04Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "The 429s come from remote addr `160.79.104.10` which isn't us — that's external traffic hammering the API. Notice how status is 429 but durations are 0.005-0.025ms which is too fast to be our test. …",
+    "SessionID": "c5089502-4f10-4fda-98cb-0743d6f25a77"
+  },
+  {
+    "Timestamp": "2026-04-07T17:11:13Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "Rate limit is **per-IP**. So our requests from this machine (192.168.68.108 from the Mac Mini's perspective) have their own bucket separate from the external attacker. Let me verify by doing a direct …",
+    "SessionID": "c5089502-4f10-4fda-98cb-0743d6f25a77"
+  },
+  {
+    "Timestamp": "2026-04-07T17:11:25Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "Direct curl works. So the 429 happened because AMB's runner must be hammering sessions concurrently. Looking at the traceback, it's running `memory.ingest(documents)` which iterates. The rate limit is…",
+    "SessionID": "c5089502-4f10-4fda-98cb-0743d6f25a77"
+  },
+  {
+    "Timestamp": "2026-04-07T17:11:37Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "100 requests per minute per IP. For PersonaMem 32k, we have ~195 docs and each doc has several turns — we'll easily blow past 100 requests/min from our machine.\n\nFor the smoke test (3 queries), we n…",
+    "SessionID": "c5089502-4f10-4fda-98cb-0743d6f25a77"
+  },
+  {
+    "Timestamp": "2026-04-08T08:28:07Z",
+    "Classification": "temporary_capacity",
+    "MatchedPattern": "capacity",
+    "Confidence": 0.4,
+    "RedactedExcerpt": "Let me think through this properly before writing code — it's a design question with legal and data-quality implications.\n\n## What the user sees\n\nEach concern paragraph already shows what residents …",
+    "SessionID": "59692712-6fa1-44ca-9256-3893932587a3"
+  },
+  {
+    "Timestamp": "2026-04-08T08:50:32Z",
+    "Classification": "temporary_capacity",
+    "MatchedPattern": "capacity",
+    "Confidence": 0.4,
+    "RedactedExcerpt": "End-to-end working. The screenshot shows the **AI Narrative card** below the concern grid containing:\n\n1. **Amber disclaimer banner**: *\"Quadra notes are AI-generated analysis written from the Quadra …",
+    "SessionID": "59692712-6fa1-44ca-9256-3893932587a3"
+  },
+  {
+    "Timestamp": "2026-04-08T09:43:33Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "80% (4/5) — turn pairing helps. But ingestion hit the 100/min server rate limit. Let me bump it for benchmarking.",
+    "SessionID": "c5089502-4f10-4fda-98cb-0743d6f25a77"
+  },
+  {
+    "Timestamp": "2026-04-08T09:44:56Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "Binary built. Deploying with rate limit bumped via env var.",
+    "SessionID": "c5089502-4f10-4fda-98cb-0743d6f25a77"
+  },
+  {
+    "Timestamp": "2026-04-08T09:45:43Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "Rate limit at 5000/min. Now relaunching the LoComo conv-26 smoke at full size to see real numbers, then full LoComo if it works.",
+    "SessionID": "c5089502-4f10-4fda-98cb-0743d6f25a77"
+  },
+  {
+    "Timestamp": "2026-04-08T09:59:21Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "# AI Regulatory Compliance Review — siteengine_ai\n\n**Scope:** EU AI Act, US (federal + key states), UK. **Date:** 2026-04-08. Based on codebase audit + regulatory research. Anything with material le…",
+    "SessionID": "2f8ec750-0a57-4832-906c-c73dd3e42d00"
+  },
+  {
+    "Timestamp": "2026-04-08T12:03:44Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "# New Pipeline: Automated Web→RAG Orchestrator\n\nLet me think through this properly.\n\n## Architecture\n\nThis is a **three-stage orchestration** that doesn't quite fit into any existing project. It's a…",
+    "SessionID": "bb61e5b8-e58c-457d-b230-f075a7c733be"
+  },
+  {
+    "Timestamp": "2026-04-08T16:30:43Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "# OWASP Security Analysis — siteengine_ai\n\n**Date:** 2026-04-08\n**Scope:** Multi-tenant RAG API server, MCP stdio server, library mode\n**Frameworks:** OWASP LLM Top 10 (2025), OWASP API Security Top…",
+    "SessionID": "2f8ec750-0a57-4832-906c-c73dd3e42d00"
+  },
+  {
+    "Timestamp": "2026-04-08T17:57:29Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "Done. Here's the complete state:\n\n## ford-prefect — Production Ready\n\n### Repository\n- **GitHub**: [SeamusWaldron/ford-prefect](https://github.com/SeamusWaldron/ford-prefect) (private)\n- **4 commits…",
+    "SessionID": "bb61e5b8-e58c-457d-b230-f075a7c733be"
+  },
+  {
+    "Timestamp": "2026-04-08T18:09:54Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "HTTP server timeouts already exist and are reasonable (5 min Write, 120s Idle). That's already good. Now I need to wire in body limit, security headers, and swap rate limiter.",
+    "SessionID": "2f8ec750-0a57-4832-906c-c73dd3e42d00"
+  },
+  {
+    "Timestamp": "2026-04-08T18:21:01Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "All 27 OWASP hardening tasks complete. Here's the summary:\n\n## OWASP Hardening Sprint — Delivered\n\n**Plan:** `docs/superpowers/plans/2026-04-08-owasp-hardening.md`\n**Thesis:** `docs/thesis/A9_OWASP_…",
+    "SessionID": "2f8ec750-0a57-4832-906c-c73dd3e42d00"
+  },
+  {
+    "Timestamp": "2026-04-09T05:25:38Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "I'll do the simplify review inline (the agent sandbox ran out of budget) and combine it with the plan check.\n\n## 1. Coverage Summary\n\n**The \"plan\"** is the architecture I proposed in response to your …",
+    "SessionID": "bb61e5b8-e58c-457d-b230-f075a7c733be"
+  },
+  {
+    "Timestamp": "2026-04-09T05:26:33Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "API Error: Rate limit reached",
+    "SessionID": "bb61e5b8-e58c-457d-b230-f075a7c733be"
+  },
+  {
+    "Timestamp": "2026-04-09T05:49:57Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "Everything pushed. Here's the final compliance status:\n\n## Plan Compliance — After Fixes\n\n**Coverage: 33 / 33 plan items complete** (up from 20/33).\n\n| Plan Item | Status |\n|-----------|--------|\n| …",
+    "SessionID": "bb61e5b8-e58c-457d-b230-f075a7c733be"
+  },
+  {
+    "Timestamp": "2026-04-09T11:14:19Z",
+    "Classification": "temporary_capacity",
+    "MatchedPattern": "capacity",
+    "Confidence": 0.4,
+    "RedactedExcerpt": "Both EHDC versions committed and pushed. Here's what you've got:\n\n## Two EHDC examples\n\n| File | Data | Best for |\n|---|---|---|\n| `docs/ho_return_ehdc_2026_example_brent_scale.xlsx` | **Brent's verba…",
+    "SessionID": "3e9077fd-93ab-43ea-8693-0b2ec9f34f24"
+  },
+  {
+    "Timestamp": "2026-04-09T12:07:08Z",
+    "Classification": "temporary_capacity",
+    "MatchedPattern": "overloaded",
+    "Confidence": 0.6,
+    "RedactedExcerpt": "Phase 3 agent hit a 529 overloaded error on its first tool call — it never actually started. I'll do Phase 3 inline since I have full context and the work is critical for the end-to-end path. Starti…",
+    "SessionID": "3e9077fd-93ab-43ea-8693-0b2ec9f34f24"
+  },
+  {
+    "Timestamp": "2026-04-10T09:52:42Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "API Error: Rate limit reached",
+    "SessionID": "c5089502-4f10-4fda-98cb-0743d6f25a77"
+  },
+  {
+    "Timestamp": "2026-04-10T09:52:44Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "API Error: Rate limit reached",
+    "SessionID": "bb61e5b8-e58c-457d-b230-f075a7c733be"
+  },
+  {
+    "Timestamp": "2026-04-10T09:52:45Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "API Error: Rate limit reached",
+    "SessionID": "c5089502-4f10-4fda-98cb-0743d6f25a77"
+  },
+  {
+    "Timestamp": "2026-04-10T10:03:36Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "The background agent hit a rate limit. I'll write both files directly.",
+    "SessionID": "c5089502-4f10-4fda-98cb-0743d6f25a77"
+  },
+  {
+    "Timestamp": "2026-04-10T15:52:27Z",
+    "Classification": "temporary_capacity",
+    "MatchedPattern": "overloaded",
+    "Confidence": 0.6,
+    "RedactedExcerpt": "The fix is **multi-pass extraction** — two short, focused prompts instead of one overloaded prompt. Each gets the LLM's full instruction-following attention on one dimension.\n\n- **Pass 1 (temporal/n…",
+    "SessionID": "c5089502-4f10-4fda-98cb-0743d6f25a77"
+  },
+  {
+    "Timestamp": "2026-04-10T15:52:40Z",
+    "Classification": "temporary_capacity",
+    "MatchedPattern": "overloaded",
+    "Confidence": 0.6,
+    "RedactedExcerpt": "Now I'll replace the single overloaded prompt with two focused prompts and update `ExtractFacts` to run both passes.",
+    "SessionID": "c5089502-4f10-4fda-98cb-0743d6f25a77"
+  },
+  {
+    "Timestamp": "2026-04-10T16:44:44Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "\n\nNext question:\n\n**Rate limiting strategy — how polite should we be?**\n\nThe research confirmed no CAPTCHA or explicit rate limits on IDOX portals, but we want to behave like a human browsing, not a…",
+    "SessionID": "f5d3f2fe-2b09-425a-baa4-be7ffadccac9"
+  },
+  {
+    "Timestamp": "2026-04-10T17:11:47Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "\n\nThat covers all the design questions. Let me now present the full design — I'll go section by section.\n\n## Design Section 1: Architecture\n\n**`cmd/quadra-scraper/`** — a standalone Go CLI binary …",
+    "SessionID": "f5d3f2fe-2b09-425a-baa4-be7ffadccac9"
+  },
+  {
+    "Timestamp": "2026-04-10T17:41:52Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "\n\n## Design Section 4: Database writes and LLM integration\n\n**Bronze writes** — raw preservation. For each scraped application:\n\n```go\n// {council}_bronze.applications — store raw HTML or JSON sna…",
+    "SessionID": "f5d3f2fe-2b09-425a-baa4-be7ffadccac9"
+  },
+  {
+    "Timestamp": "2026-04-10T17:57:42Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "\n\n## Design Section 5: CLI interface and configuration\n\n**Binary: `cmd/quadra-scraper`**\n\n```bash\n# Daily incremental run — scrape apps validated in last 28 days, refresh comments on active apps\nqua…",
+    "SessionID": "f5d3f2fe-2b09-425a-baa4-be7ffadccac9"
+  },
+  {
+    "Timestamp": "2026-04-10T18:07:24Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "\n\nThat covers the full design. Let me summarise it in one place, then write the spec document.\n\n## Full Design Summary\n\n**What:** A standalone Go CLI (`cmd/quadra-scraper`) that scrapes IDOX Public Ac…",
+    "SessionID": "f5d3f2fe-2b09-425a-baa4-be7ffadccac9"
+  },
+  {
+    "Timestamp": "2026-04-10T18:24:36Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "**Spec coverage check:**\n\n| Spec requirement | Task covering it |\n|---|---|\n| Standalone CLI with cobra | Task 3.1 |\n| Generic IDOX HTTP client (pkg/idox) | Tasks 1.1-1.5 |\n| Date-range search + pagin…",
+    "SessionID": "f5d3f2fe-2b09-425a-baa4-be7ffadccac9"
+  },
+  {
+    "Timestamp": "2026-04-10T23:00:27Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "Excellent — it's working! The scraper is:\n- Successfully searching the Durham portal with CSRF authentication\n- Paginating through results (10 per page, 290+ found so far)\n- Handling rate limit retr…",
+    "SessionID": "f5d3f2fe-2b09-425a-baa4-be7ffadccac9"
+  },
+  {
+    "Timestamp": "2026-04-10T23:16:52Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "All 6 phases complete. Here's the summary:\n\n## Implementation Complete\n\n**20 commits** across 6 phases:\n\n| Phase | What was built | Status |\n|-------|---------------|--------|\n| 1 | `pkg/idox/` — 5 …",
+    "SessionID": "f5d3f2fe-2b09-425a-baa4-be7ffadccac9"
+  },
+  {
+    "Timestamp": "2026-04-11T08:33:59Z",
+    "Classification": "temporary_capacity",
+    "MatchedPattern": "capacity",
+    "Confidence": 0.4,
+    "RedactedExcerpt": "This is very valuable. For DM/26/00565/FPA, the consultee comments are:\n\n| Consultee | Topic |\n|---|---|\n| LLFA (Lead Local Flood Authority) | Surface water management |\n| Education | School capacity …",
+    "SessionID": "f5d3f2fe-2b09-425a-baa4-be7ffadccac9"
+  },
+  {
+    "Timestamp": "2026-04-11T13:57:01Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "Now I have all the code. Let me audit against both plans.\n\n## 1. Coverage Summary\n\nAuditing against the two plans:\n- `docs/superpowers/plans/2026-04-10-idox-scraper-implementation.md` (original scrape…",
+    "SessionID": "f5d3f2fe-2b09-425a-baa4-be7ffadccac9"
+  },
+  {
+    "Timestamp": "2026-04-11T14:26:44Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "It's processing — getting 5xx retries from the portal occasionally (rate limiting us). With 73 apps and 2s delay + retries, this will take a while. Let me let it run and check later:",
+    "SessionID": "f5d3f2fe-2b09-425a-baa4-be7ffadccac9"
+  },
+  {
+    "Timestamp": "2026-04-11T22:40:53Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "Here's the full picture:\n\n## Current Automated Scraping Configuration\n\n**Schedule:** Daily at 06:00 UTC via supercronic in the `quadra_scraper` Docker container.\n\n**Command:** `quadra-scraper run --co…",
+    "SessionID": "f5d3f2fe-2b09-425a-baa4-be7ffadccac9"
+  },
+  {
+    "Timestamp": "2026-04-12T07:56:59Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "Test plan written and pushed as `fea56aa`. Key findings from reading the AMB source:\n\n- **MemSim** is MCQ (letter-match, no LLM judge), **Chinese-language**, 6 separate splits, no isolation unit (shar…",
+    "SessionID": "c5089502-4f10-4fda-98cb-0743d6f25a77"
+  },
+  {
+    "Timestamp": "2026-04-13T03:45:27Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "too many requests",
+    "Confidence": 0.9,
+    "RedactedExcerpt": "The OpenAI quota is exhausted again (429 Too Many Requests). The LifeBench full run that completed earlier consumed the remaining quota. The `slog.Warn` upgrade we deployed is now correctly surfacing …",
+    "SessionID": "a94f97d9-31fa-4740-8e19-c687ce805aeb"
+  },
+  {
+    "Timestamp": "2026-04-15T07:33:32Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "too many requests",
+    "Confidence": 0.9,
+    "RedactedExcerpt": "Test rows cleaned. Stopping the chain here — this is genuinely a \"needs Seamus\" decision point, not something the doer or orchestrator can resolve.\n\n## Current state\n\nTwo real bugs caught and fixed …",
+    "SessionID": "62c7fb25-ef99-45b2-bea9-4a9c655cc4b6"
+  },
+  {
+    "Timestamp": "2026-04-15T12:13:11Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "Nothing is running right now. Let me break down what happened:\n\n**Current state:**\n- BEAM v12 **completed** at 60.7% (that result is saved)\n- No process currently running\n- No OpenAI 429 errors in the…",
+    "SessionID": "a94f97d9-31fa-4740-8e19-c687ce805aeb"
+  },
+  {
+    "Timestamp": "2026-04-15T14:05:10Z",
+    "Classification": "hard_limit",
+    "MatchedPattern": "usage limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "Claude usage limit reached. You have reached your maximum usage for this period. Please come back later or try again tomorrow.",
+    "SessionID": "sess-limit-001"
+  },
+  {
+    "Timestamp": "2026-04-16T11:25:21Z",
+    "Classification": "temporary_capacity",
+    "MatchedPattern": "overloaded",
+    "Confidence": 0.6,
+    "RedactedExcerpt": "Here's what I've worked through:\n\n**The core problem**: the centre score was overloaded — collapse, toggle labels, and select all competed for the same click, with different behaviour on root vs chi…",
+    "SessionID": "ce8551d4-b6a4-484c-9757-2e5317a5fc9a"
+  },
+  {
+    "Timestamp": "2026-04-16T21:23:15Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "too many requests",
+    "Confidence": 0.9,
+    "RedactedExcerpt": "You're right to be angry. I got this wrong and I need to own it cleanly.\n\n**What I told you vs. what's true:**\n\nI read `siteengine-ai-api` logs showing 130K-token extractor errors at 17:14 and 17:39 U…",
+    "SessionID": "62c7fb25-ef99-45b2-bea9-4a9c655cc4b6"
+  },
+  {
+    "Timestamp": "2026-04-17T05:41:14Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "Found the pattern. Not this machine. Let me pin the exact culprit on Mac Mini.\n\n**Key metrics (overnight 2026-04-17):**\n- 4,649 gpt-4o-mini requests on the NEW key\n- 123M input tokens = **~26K tokens …",
+    "SessionID": "62c7fb25-ef99-45b2-bea9-4a9c655cc4b6"
+  },
+  {
+    "Timestamp": "2026-04-17T09:30:27Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "Both agents done. Let me synthesise.\n\n---\n\n## Preston City Council — Scraper Design\n\n### Portal Summary\n\nPreston is **not IDOX**. It's a custom ASP.NET WebForms application at `selfservice.preston.g…",
+    "SessionID": "f6a08056-315a-4906-bf19-10e1cc23034c"
+  },
+  {
+    "Timestamp": "2026-04-17T12:37:36Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "You're right — I was thinking in Anthropic-pay-per-token terms. If Claude Code's your subscription and local LLM handles Hydrate's summariser, the benchmark is essentially free. The real constraints…",
+    "SessionID": "62c7fb25-ef99-45b2-bea9-4a9c655cc4b6"
+  },
+  {
+    "Timestamp": "2026-04-17T14:47:22Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "## The pilot application — Pulse, a habit-tracker landing page\n\nScenario A from `scenarios/a-landing-page.yaml`. Pilot only does this one; if signal is strong we expand to scenarios B and C.\n\n**What…",
+    "SessionID": "62c7fb25-ef99-45b2-bea9-4a9c655cc4b6"
+  },
+  {
+    "Timestamp": "2026-04-17T14:49:31Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "All verified. Dry-run prints the exact routing we wanted:\n\n| Cell | Model | Session | Workspace |\n|---|---|---|---|\n| 1 | `claude-opus-4-7` baseline | `opus-vanilla` | `~/Documents/Dev/bench/opus-vani…",
+    "SessionID": "62c7fb25-ef99-45b2-bea9-4a9c655cc4b6"
+  },
+  {
+    "Timestamp": "2026-04-17T15:19:57Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "Yes. New architecture = headless subprocesses. Once I fire the runner, it:\n\n- Spawns `claude --print …` for each session directly (no tmux needed)\n- Writes tokens + transcripts to `results/…` as i…",
+    "SessionID": "62c7fb25-ef99-45b2-bea9-4a9c655cc4b6"
+  },
+  {
+    "Timestamp": "2026-04-17T15:24:26Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "Rewrite landed in commit **2ad3cb4**.\n\nWhat changed:\n- **`pkg/tmuxdoer` deleted** — pane-scraping gone.\n- **`pkg/streamjson`** (new) — `ParseResult` reads one JSON line at a time, returns the firs…",
+    "SessionID": "1844a6e7-e0e0-43b3-9e25-4724283bddb8"
+  },
+  {
+    "Timestamp": "2026-04-17T18:12:47Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "That's the experiment that would settle it. Let me cost it and propose a concrete run.\n\n## The hybrid experiment — concrete design\n\n**Setup:**\n- Fresh workspace, fresh project scope (new `SESHELL_BE…",
+    "SessionID": "62c7fb25-ef99-45b2-bea9-4a9c655cc4b6"
+  },
+  {
+    "Timestamp": "2026-04-18T18:58:22Z",
+    "Classification": "temporary_capacity",
+    "MatchedPattern": "capacity",
+    "Confidence": 0.4,
+    "RedactedExcerpt": "# Chapter 5: Food, Drink, and Tradition\n\nThe remoteness of Eilean-an-Ròn has preserved a food culture rooted in what the islands produce: shellfish from cold waters, mutton from moorland flocks, dair…",
+    "SessionID": "ab491a00-dd01-4a31-97cf-434ab421a679"
+  },
+  {
+    "Timestamp": "2026-04-19T07:08:44Z",
+    "Classification": "temporary_capacity",
+    "MatchedPattern": "capacity",
+    "Confidence": 0.4,
+    "RedactedExcerpt": "Now I'll write chapter 5, matching the formal gazetteering style and factual detail established in chapters 1–4.\n\n---\n\n# Chapter 5: Food and Drink\n\nThe food traditions of Eilean-an-Ròn are insepara…",
+    "SessionID": "7b0280a9-2483-4c9d-b12e-fd0cd2313439"
+  },
+  {
+    "Timestamp": "2026-04-19T07:10:59Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "Read the doc and the concerns. All four points are fair — and the fourth one needs a correction from me, we're well past 200 LOC on those binaries. Here's an honest response.\n\n---\n\n## 1. Brownfield …",
+    "SessionID": "62c7fb25-ef99-45b2-bea9-4a9c655cc4b6"
+  },
+  {
+    "Timestamp": "2026-04-19T08:14:08Z",
+    "Classification": "temporary_capacity",
+    "MatchedPattern": "capacity",
+    "Confidence": 0.4,
+    "RedactedExcerpt": "Sharp read. You're right — \"saved you $0.42 this week\" is a non-event for someone on Pro/Max, and \"extra X days of runway\" is a genuine KPI the user feels every Friday afternoon when the weekly cap …",
+    "SessionID": "62c7fb25-ef99-45b2-bea9-4a9c655cc4b6"
+  },
+  {
+    "Timestamp": "2026-04-20T07:36:32Z",
+    "Classification": "temporary_capacity",
+    "MatchedPattern": "capacity",
+    "Confidence": 0.4,
+    "RedactedExcerpt": "# Chapter 4: Economy and Livelihoods\n\nThe economy of Eilean-an-Ròn rests upon three primary sectors—fishing, crofting, and tourism—each shaped by the archipelago's exposure to Atlantic weather an…",
+    "SessionID": "df1c4294-9444-4d5f-9fb9-84cd1c6ceb19"
+  },
+  {
+    "Timestamp": "2026-04-20T07:41:09Z",
+    "Classification": "temporary_capacity",
+    "MatchedPattern": "capacity",
+    "Confidence": 0.4,
+    "RedactedExcerpt": "# Chapter 9: Sròn an Tuath\n\nThe northernmost island of the Eilean-an-Ròn archipelago rises 2.8 kilometres from the Kyle of Lochalsh, presenting a study in maritime severity. With an area of 3.2 squa…",
+    "SessionID": "3df4e447-9946-4f96-baaf-efbec8f721ba"
+  },
+  {
+    "Timestamp": "2026-04-20T07:47:34Z",
+    "Classification": "temporary_capacity",
+    "MatchedPattern": "capacity",
+    "Confidence": 0.4,
+    "RedactedExcerpt": "I'll write chapter 6 of the Eilean-an-Ròn gazetteer, focusing on the main island.\n\n---\n\n# Chapter 6: Eilean Mòr — The Heart of the Archipelago\n\nEilean Mòr, the largest and most southerly island i…",
+    "SessionID": "5155d170-8be7-4bb7-8ff3-5bff2d6f8c47"
+  },
+  {
+    "Timestamp": "2026-04-20T07:49:36Z",
+    "Classification": "temporary_capacity",
+    "MatchedPattern": "capacity",
+    "Confidence": 0.4,
+    "RedactedExcerpt": "# Chapter 9: Eilean Beinn, the Northern Sentinel\n\nEilean Beinn, the northernmost island of the Eilean-an-Ròn archipelago, commands 247 hectares of exposed moorland and shattered rock at 58°42′N, a…",
+    "SessionID": "618dd88a-1ec4-4f92-a22d-507f26951c4e"
+  },
+  {
+    "Timestamp": "2026-04-20T07:56:28Z",
+    "Classification": "temporary_capacity",
+    "MatchedPattern": "capacity",
+    "Confidence": 0.4,
+    "RedactedExcerpt": "# Chapter 6: Eilean Mòr\n\nEilean Mòr—the Big Island—anchors the southern margin of the Eilean-an-Ròn archipelago, a crescent of basalt and heather stretching eight kilometres from north to south…",
+    "SessionID": "ed07fd14-0990-4936-a9b6-71766a22b32e"
+  },
+  {
+    "Timestamp": "2026-04-20T09:56:40Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "Yes — structurally it already has everything needed. The monologue layer tracks goals, open questions, and uncertainty; what's missing is a surfacing mechanism. This fits cleanly with the existing w…",
+    "SessionID": "0e1ecc17-f94f-42d0-890b-d788239dfdff"
+  },
+  {
+    "Timestamp": "2026-04-20T10:00:10Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "rate_limit_error Rate limit exceeded. Too many requests. Please try again later.",
+    "SessionID": "sess-ratelimit-001"
+  },
+  {
+    "Timestamp": "2026-04-20T15:26:22Z",
+    "Classification": "temporary_capacity",
+    "MatchedPattern": "capacity",
+    "Confidence": 0.4,
+    "RedactedExcerpt": "Yes — **the Mac Mini is at 100% capacity on the system drive** (1.1 GB free out of 228 GB), and **yes, Docker is stored on the internal drive**. Breakdown:\n\n| Volume | Used | Available | % full |\n|-…",
+    "SessionID": "62c7fb25-ef99-45b2-bea9-4a9c655cc4b6"
+  },
+  {
+    "Timestamp": "2026-04-20T21:12:55Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "`hydrate | 55% cap · 1.4d left | sonnet · 5h 5% · siteengine_ai`\n\n**`hydrate`** — brand anchor, confirms the hook fired and the status line is live.\n\n**`55% cap · 1.4d left`** — you've consume…",
+    "SessionID": "62c7fb25-ef99-45b2-bea9-4a9c655cc4b6"
+  },
+  {
+    "Timestamp": "2026-04-20T21:50:10Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "No existing Claude Code container — we'll need to build one. Let me give you the full overview.\n\n---\n\n## Overview: APJ Ltd Enterprise Overnight Swarm Test\n\n### What we're actually testing\n\nThat thre…",
+    "SessionID": "62c7fb25-ef99-45b2-bea9-4a9c655cc4b6"
+  },
+  {
+    "Timestamp": "2026-04-21T13:55:54Z",
+    "Classification": "temporary_capacity",
+    "MatchedPattern": "capacity",
+    "Confidence": 0.4,
+    "RedactedExcerpt": "Now update the homepage hero to include \"Capacity Multiplier\" framing in the tokenmaxxing hook section:",
+    "SessionID": "62c7fb25-ef99-45b2-bea9-4a9c655cc4b6"
+  },
+  {
+    "Timestamp": "2026-04-21T13:57:21Z",
+    "Classification": "temporary_capacity",
+    "MatchedPattern": "capacity",
+    "Confidence": 0.4,
+    "RedactedExcerpt": "Everything looks sharp and on-brand. All changes are live at `gethydrate.dev`. Here's what was done:\n\n**Enterprise page** (`/enterprise`):\n- Eyebrow now reads \"Enterprise · Capacity Multiplier\"\n- Upd…",
+    "SessionID": "62c7fb25-ef99-45b2-bea9-4a9c655cc4b6"
+  },
+  {
+    "Timestamp": "2026-04-21T14:10:25Z",
+    "Classification": "temporary_capacity",
+    "MatchedPattern": "capacity",
+    "Confidence": 0.4,
+    "RedactedExcerpt": "The top of the enterprise page looks excellent — \"ENTERPRISE · CAPACITY MULTIPLIER\" eyebrow, updated lead, benchmark stats, and cache callout all correct. Let me scroll down to the calculator.",
+    "SessionID": "62c7fb25-ef99-45b2-bea9-4a9c655cc4b6"
+  },
+  {
+    "Timestamp": "2026-04-22T08:11:25Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "try again in",
+    "Confidence": 0.8,
+    "RedactedExcerpt": "API Error: 500 The number of tokens to keep from the initial prompt is greater than the context length (n_keep: 70123\u003e= n_ctx: 16384). Try to load the model with a larger context length, or provide a …",
+    "SessionID": "d398abf5-e611-42a7-b132-6f2aeb1553f2"
+  },
+  {
+    "Timestamp": "2026-04-23T20:34:10Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "HTTP 429 — rate limited. Let me add retry/backoff and rerun:",
+    "SessionID": "62c7fb25-ef99-45b2-bea9-4a9c655cc4b6"
+  },
+  {
+    "Timestamp": "2026-04-24T01:15:26Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "More stale failed tasks from the earlier Python heredoc attempts that hit the 429 rate limit — all superseded by the curl loop that successfully deleted everything. Nothing to action, both databases…",
+    "SessionID": "62c7fb25-ef99-45b2-bea9-4a9c655cc4b6"
+  },
+  {
+    "Timestamp": "2026-04-24T07:19:04Z",
+    "Classification": "hard_limit",
+    "MatchedPattern": "come back later",
+    "Confidence": 0.8,
+    "RedactedExcerpt": "Good context from the earlier analysis. Let me ask the right question before proposing approaches.\n\nWhen you say \"active working session\" — which scenario do you have in mind?\n\n**(a)** You're mid-se…",
+    "SessionID": "6773417f-81bc-4e72-aed9-eb57b3d9a586"
+  },
+  {
+    "Timestamp": "2026-04-24T10:47:31Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "Let me give you a practical strategy for this — two distinct tracks, because your ZX Spectrum work is actually your fastest path to karma.\n\n---\n\n## Track 1: AI/Tech Comments (steady drip)\n\n**Best su…",
+    "SessionID": "3e67f03c-9819-4aad-bb4a-5f206f142213"
+  },
+  {
+    "Timestamp": "2026-04-24T17:29:17Z",
+    "Classification": "temporary_capacity",
+    "MatchedPattern": "capacity",
+    "Confidence": 0.4,
+    "RedactedExcerpt": "Plan written to `docs/plans/2026-04-24-compliance-plan.md`. Here's the structure:\n\n**Phase 1 — Pre-launch (before April 29):** govulncheck in CI, SHA256 checksums on install.sh, credential logging a…",
+    "SessionID": "62c7fb25-ef99-45b2-bea9-4a9c655cc4b6"
+  },
+  {
+    "Timestamp": "2026-04-26T17:16:13Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "The server has 10 facts live right now. Let me cross-check them against what was created tier by tier:\n\n**Free tier facts created (6):**\n- ✓ \"This project uses Go stdlib only, no external dependenci…",
+    "SessionID": "3e67f03c-9819-4aad-bb4a-5f206f142213"
+  },
+  {
+    "Timestamp": "2026-04-26T17:24:28Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "Found it. Not the encryption bug — it's the server returning `400` when OpenAI rate-limits the embedding call at storage time. The server is too strict: it requires an embedding at write time and re…",
+    "SessionID": "3e67f03c-9819-4aad-bb4a-5f206f142213"
+  },
+  {
+    "Timestamp": "2026-04-27T08:07:32Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "That's the test, fully run with real Claude Code sessions and hooks firing. Summary of what was proven:\n\n**Alice's session:** Claude scaffolded the entire `taskapi` — 5 files, 6 endpoints, RFC 7807 …",
+    "SessionID": "3e67f03c-9819-4aad-bb4a-5f206f142213"
+  },
+  {
+    "Timestamp": "2026-04-30T09:29:53Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "Both pages built successfully. Now the high-level review in chat.\n\n---\n\nHere's what was done and what the honest picture looks like.\n\n**What was created**\n\nThree new files:\n- `gethydrate-dev/src/pages…",
+    "SessionID": "62c7fb25-ef99-45b2-bea9-4a9c655cc4b6"
+  },
+  {
+    "Timestamp": "2026-04-30T09:37:19Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "You're right — I conflated them. Let me be precise about what each is.\n\n**hydrate-server** is a local daemon: SQLite, one user, one machine, HTTP on localhost, per-server API key, simple audit log. …",
+    "SessionID": "62c7fb25-ef99-45b2-bea9-4a9c655cc4b6"
+  },
+  {
+    "Timestamp": "2026-04-30T09:48:22Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "Now I have the full picture. Let me give you a clear answer.\n\n---\n\nHere's what actually happened inside alice during the test run.\n\n## The Dreams\n\nEvery dream had the same character: **tone=conflictin…",
+    "SessionID": "3e67f03c-9819-4aad-bb4a-5f206f142213"
+  },
+  {
+    "Timestamp": "2026-04-30T15:45:27Z",
+    "Classification": "rate_limit",
+    "MatchedPattern": "rate limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "Everything is healthy. Here's the summary:\n\n**Scraper status: all green**\n\n- `quadra_scraper` container has been running for 7 days on the Mac Mini\n- Scrapes Durham, Brent, and Preston daily at 06:00 …",
+    "SessionID": "49802f35-3332-4f06-b4c3-409da0c5f525"
+  },
+  {
+    "Timestamp": "2026-05-04T10:51:36Z",
+    "Classification": "hard_limit",
+    "MatchedPattern": "usage limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "You've hit your org's monthly usage limit",
+    "SessionID": "3c49f1df-805e-47f5-aa15-33a2bb8d67a7"
+  },
+  {
+    "Timestamp": "2026-05-04T10:51:36Z",
+    "Classification": "hard_limit",
+    "MatchedPattern": "usage limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "You've hit your org's monthly usage limit",
+    "SessionID": "91ec4002-e732-4865-ad02-f59706105d1e"
+  },
+  {
+    "Timestamp": "2026-05-04T10:51:36Z",
+    "Classification": "hard_limit",
+    "MatchedPattern": "usage limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "You've hit your org's monthly usage limit",
+    "SessionID": "98b37fff-58bb-47d6-b599-45449942bde4"
+  },
+  {
+    "Timestamp": "2026-05-04T10:51:36Z",
+    "Classification": "hard_limit",
+    "MatchedPattern": "usage limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "You've hit your org's monthly usage limit",
+    "SessionID": "9c5f4ed0-c9b6-4892-971a-71c98467c202"
+  },
+  {
+    "Timestamp": "2026-05-04T10:51:36Z",
+    "Classification": "hard_limit",
+    "MatchedPattern": "usage limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "You've hit your org's monthly usage limit",
+    "SessionID": "b5f2d61f-adef-42ed-b409-21f4b933bab8"
+  },
+  {
+    "Timestamp": "2026-05-04T10:51:37Z",
+    "Classification": "hard_limit",
+    "MatchedPattern": "usage limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "You've hit your org's monthly usage limit",
+    "SessionID": "15ba3038-866d-49d4-9086-e0af29881b9b"
+  },
+  {
+    "Timestamp": "2026-05-04T10:51:37Z",
+    "Classification": "hard_limit",
+    "MatchedPattern": "usage limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "You've hit your org's monthly usage limit",
+    "SessionID": "2ca0432b-ddf4-4352-b652-36b9bfd67103"
+  },
+  {
+    "Timestamp": "2026-05-04T10:51:37Z",
+    "Classification": "hard_limit",
+    "MatchedPattern": "usage limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "You've hit your org's monthly usage limit",
+    "SessionID": "bb9c4332-8044-48bf-9b89-7f4e16837696"
+  },
+  {
+    "Timestamp": "2026-05-04T10:51:37Z",
+    "Classification": "hard_limit",
+    "MatchedPattern": "usage limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "You've hit your org's monthly usage limit",
+    "SessionID": "e90e7005-a9b3-4d10-8902-4b3661531635"
+  },
+  {
+    "Timestamp": "2026-05-04T10:51:37Z",
+    "Classification": "hard_limit",
+    "MatchedPattern": "usage limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "You've hit your org's monthly usage limit",
+    "SessionID": "f85a6650-5ec2-4f49-bd93-2ea90e68b2de"
+  },
+  {
+    "Timestamp": "2026-05-04T10:51:37Z",
+    "Classification": "hard_limit",
+    "MatchedPattern": "usage limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "You've hit your org's monthly usage limit",
+    "SessionID": "fcd09b90-c32c-49c6-bedb-0738b0eb0ee8"
+  },
+  {
+    "Timestamp": "2026-05-04T10:51:38Z",
+    "Classification": "hard_limit",
+    "MatchedPattern": "usage limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "You've hit your org's monthly usage limit",
+    "SessionID": "2ef5cf07-b84c-4a51-9f08-90c2cf04014d"
+  },
+  {
+    "Timestamp": "2026-05-04T10:51:38Z",
+    "Classification": "hard_limit",
+    "MatchedPattern": "usage limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "You've hit your org's monthly usage limit",
+    "SessionID": "30de93e0-2a03-4992-9646-2d7fa3808976"
+  },
+  {
+    "Timestamp": "2026-05-04T10:51:38Z",
+    "Classification": "hard_limit",
+    "MatchedPattern": "usage limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "You've hit your org's monthly usage limit",
+    "SessionID": "33285717-e422-4b68-a2bf-337d61d94736"
+  },
+  {
+    "Timestamp": "2026-05-04T10:51:38Z",
+    "Classification": "hard_limit",
+    "MatchedPattern": "usage limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "You've hit your org's monthly usage limit",
+    "SessionID": "417171e0-adbd-4a1a-8098-888dce10e429"
+  },
+  {
+    "Timestamp": "2026-05-04T10:51:38Z",
+    "Classification": "hard_limit",
+    "MatchedPattern": "usage limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "You've hit your org's monthly usage limit",
+    "SessionID": "e8fffac7-4877-4e46-9eee-4dbb9f89711a"
+  },
+  {
+    "Timestamp": "2026-05-04T10:51:38Z",
+    "Classification": "hard_limit",
+    "MatchedPattern": "usage limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "You've hit your org's monthly usage limit",
+    "SessionID": "e92b1851-592f-4225-a30c-ab7b565cbfc6"
+  },
+  {
+    "Timestamp": "2026-05-04T10:51:39Z",
+    "Classification": "hard_limit",
+    "MatchedPattern": "usage limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "You've hit your org's monthly usage limit",
+    "SessionID": "10c3444b-2a01-4fe9-b93c-526e5aa7e69f"
+  },
+  {
+    "Timestamp": "2026-05-04T10:51:39Z",
+    "Classification": "hard_limit",
+    "MatchedPattern": "usage limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "You've hit your org's monthly usage limit",
+    "SessionID": "47a26187-c8e0-4632-b220-cbac4ffc5321"
+  },
+  {
+    "Timestamp": "2026-05-04T10:51:39Z",
+    "Classification": "hard_limit",
+    "MatchedPattern": "usage limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "You've hit your org's monthly usage limit",
+    "SessionID": "8c0fcbff-28fe-4354-b9a8-9900cde04dd1"
+  },
+  {
+    "Timestamp": "2026-05-04T10:51:39Z",
+    "Classification": "hard_limit",
+    "MatchedPattern": "usage limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "You've hit your org's monthly usage limit",
+    "SessionID": "8e7b6f32-debd-441e-be17-3c0d85816c47"
+  },
+  {
+    "Timestamp": "2026-05-04T10:51:39Z",
+    "Classification": "hard_limit",
+    "MatchedPattern": "usage limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "You've hit your org's monthly usage limit",
+    "SessionID": "a6d6761d-7d08-4019-91ed-98c56b2edfbb"
+  },
+  {
+    "Timestamp": "2026-05-04T10:51:39Z",
+    "Classification": "hard_limit",
+    "MatchedPattern": "usage limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "You've hit your org's monthly usage limit",
+    "SessionID": "ae38ce7d-160c-472f-9828-47e2063ef973"
+  },
+  {
+    "Timestamp": "2026-05-04T10:51:39Z",
+    "Classification": "hard_limit",
+    "MatchedPattern": "usage limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "You've hit your org's monthly usage limit",
+    "SessionID": "f8ca004b-35d1-46e6-a82d-c9a35eb0e238"
+  },
+  {
+    "Timestamp": "2026-05-04T10:51:40Z",
+    "Classification": "hard_limit",
+    "MatchedPattern": "usage limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "You've hit your org's monthly usage limit",
+    "SessionID": "0ddaaf05-83ee-4b91-a1de-a588d8f5e161"
+  },
+  {
+    "Timestamp": "2026-05-04T10:51:40Z",
+    "Classification": "hard_limit",
+    "MatchedPattern": "usage limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "You've hit your org's monthly usage limit",
+    "SessionID": "30ac5139-52aa-46a3-87a6-7077e5c4113a"
+  },
+  {
+    "Timestamp": "2026-05-04T10:51:40Z",
+    "Classification": "hard_limit",
+    "MatchedPattern": "usage limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "You've hit your org's monthly usage limit",
+    "SessionID": "538daa26-2e1a-4bd8-bf8e-84b9fc1a8493"
+  },
+  {
+    "Timestamp": "2026-05-04T10:51:40Z",
+    "Classification": "hard_limit",
+    "MatchedPattern": "usage limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "You've hit your org's monthly usage limit",
+    "SessionID": "9d25012c-7598-437a-ac63-54c42ad086d5"
+  },
+  {
+    "Timestamp": "2026-05-04T10:51:40Z",
+    "Classification": "hard_limit",
+    "MatchedPattern": "usage limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "You've hit your org's monthly usage limit",
+    "SessionID": "ae074341-1e0a-45e2-abd4-d72e65a0a0fd"
+  },
+  {
+    "Timestamp": "2026-05-04T10:51:40Z",
+    "Classification": "hard_limit",
+    "MatchedPattern": "usage limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "You've hit your org's monthly usage limit",
+    "SessionID": "af7e1929-a2a6-413d-8794-dbb7e3c4b065"
+  },
+  {
+    "Timestamp": "2026-05-04T10:51:40Z",
+    "Classification": "hard_limit",
+    "MatchedPattern": "usage limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "You've hit your org's monthly usage limit",
+    "SessionID": "c621d2fa-7080-4655-ac1d-d94c26f4d5e8"
+  },
+  {
+    "Timestamp": "2026-05-04T10:51:41Z",
+    "Classification": "hard_limit",
+    "MatchedPattern": "usage limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "You've hit your org's monthly usage limit",
+    "SessionID": "0b1457fc-a287-42fd-bb63-d60eb3e66912"
+  },
+  {
+    "Timestamp": "2026-05-04T10:51:41Z",
+    "Classification": "hard_limit",
+    "MatchedPattern": "usage limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "You've hit your org's monthly usage limit",
+    "SessionID": "3469cdca-481f-4656-9a6e-2ac45b674c0c"
+  },
+  {
+    "Timestamp": "2026-05-04T10:51:41Z",
+    "Classification": "hard_limit",
+    "MatchedPattern": "usage limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "You've hit your org's monthly usage limit",
+    "SessionID": "72179015-cdc6-4903-b4a6-1b5a469795fa"
+  },
+  {
+    "Timestamp": "2026-05-04T10:51:41Z",
+    "Classification": "hard_limit",
+    "MatchedPattern": "usage limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "You've hit your org's monthly usage limit",
+    "SessionID": "f9e3d956-7cfb-4722-ba6d-071f2faf1902"
+  },
+  {
+    "Timestamp": "2026-05-04T10:51:42Z",
+    "Classification": "hard_limit",
+    "MatchedPattern": "usage limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "You've hit your org's monthly usage limit",
+    "SessionID": "53a70570-b39f-4127-a6b9-d87dc624c8b3"
+  },
+  {
+    "Timestamp": "2026-05-04T10:51:42Z",
+    "Classification": "hard_limit",
+    "MatchedPattern": "usage limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "You've hit your org's monthly usage limit",
+    "SessionID": "54f13ee3-862a-439e-ba8c-16b31d5b10ab"
+  },
+  {
+    "Timestamp": "2026-05-04T10:51:42Z",
+    "Classification": "hard_limit",
+    "MatchedPattern": "usage limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "You've hit your org's monthly usage limit",
+    "SessionID": "7a1f42e7-ca93-4a80-8258-ddaab6e12de9"
+  },
+  {
+    "Timestamp": "2026-05-04T10:51:42Z",
+    "Classification": "hard_limit",
+    "MatchedPattern": "usage limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "You've hit your org's monthly usage limit",
+    "SessionID": "814fb6d0-90c3-4767-823f-3c6db400af88"
+  },
+  {
+    "Timestamp": "2026-05-04T10:51:42Z",
+    "Classification": "hard_limit",
+    "MatchedPattern": "usage limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "You've hit your org's monthly usage limit",
+    "SessionID": "a95d74c8-035c-4a43-a697-2b52a26bb97a"
+  },
+  {
+    "Timestamp": "2026-05-04T10:51:42Z",
+    "Classification": "hard_limit",
+    "MatchedPattern": "usage limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "You've hit your org's monthly usage limit",
+    "SessionID": "b4385c66-20a0-416d-a70a-5ebdc3af4b89"
+  },
+  {
+    "Timestamp": "2026-05-04T10:51:42Z",
+    "Classification": "hard_limit",
+    "MatchedPattern": "usage limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "You've hit your org's monthly usage limit",
+    "SessionID": "d4d7702a-aaaa-4fc1-a8f0-bc469efafe5b"
+  },
+  {
+    "Timestamp": "2026-05-04T10:51:42Z",
+    "Classification": "hard_limit",
+    "MatchedPattern": "usage limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "You've hit your org's monthly usage limit",
+    "SessionID": "e2a00efc-414b-4db6-a9e0-4f0282df0166"
+  },
+  {
+    "Timestamp": "2026-05-04T10:51:42Z",
+    "Classification": "hard_limit",
+    "MatchedPattern": "usage limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "You've hit your org's monthly usage limit",
+    "SessionID": "ec84eec6-0e77-475e-a6dc-43f8b67eefee"
+  },
+  {
+    "Timestamp": "2026-05-04T10:51:43Z",
+    "Classification": "hard_limit",
+    "MatchedPattern": "usage limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "You've hit your org's monthly usage limit",
+    "SessionID": "0cd1de2f-2066-4d90-9429-0297c076dc68"
+  },
+  {
+    "Timestamp": "2026-05-04T10:51:43Z",
+    "Classification": "hard_limit",
+    "MatchedPattern": "usage limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "You've hit your org's monthly usage limit",
+    "SessionID": "31c66fdd-e88a-4722-b337-7dc8b28aee5c"
+  },
+  {
+    "Timestamp": "2026-05-04T10:51:43Z",
+    "Classification": "hard_limit",
+    "MatchedPattern": "usage limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "You've hit your org's monthly usage limit",
+    "SessionID": "35e9a86f-9aa6-4402-bec9-77479ff646f0"
+  },
+  {
+    "Timestamp": "2026-05-04T10:51:43Z",
+    "Classification": "hard_limit",
+    "MatchedPattern": "usage limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "You've hit your org's monthly usage limit",
+    "SessionID": "4caff3f6-5be0-49d2-ae2c-104c62710cac"
+  },
+  {
+    "Timestamp": "2026-05-04T10:51:43Z",
+    "Classification": "hard_limit",
+    "MatchedPattern": "usage limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "You've hit your org's monthly usage limit",
+    "SessionID": "821dae86-4d6c-4d28-ae00-41c465a891c9"
+  },
+  {
+    "Timestamp": "2026-05-04T10:51:43Z",
+    "Classification": "hard_limit",
+    "MatchedPattern": "usage limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "You've hit your org's monthly usage limit",
+    "SessionID": "8efbb4c8-78ac-4ada-a513-1e4823b3510d"
+  },
+  {
+    "Timestamp": "2026-05-04T10:51:43Z",
+    "Classification": "hard_limit",
+    "MatchedPattern": "usage limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "You've hit your org's monthly usage limit",
+    "SessionID": "9fedd103-758d-4821-98f8-c14137483898"
+  },
+  {
+    "Timestamp": "2026-05-04T10:51:43Z",
+    "Classification": "hard_limit",
+    "MatchedPattern": "usage limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "You've hit your org's monthly usage limit",
+    "SessionID": "ae596804-8efc-4c74-96ef-fc707a2e6a9f"
+  },
+  {
+    "Timestamp": "2026-05-04T10:51:43Z",
+    "Classification": "hard_limit",
+    "MatchedPattern": "usage limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "You've hit your org's monthly usage limit",
+    "SessionID": "af2c005c-4ac6-44ba-91a1-c7a7ba07ab85"
+  },
+  {
+    "Timestamp": "2026-05-04T10:51:43Z",
+    "Classification": "hard_limit",
+    "MatchedPattern": "usage limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "You've hit your org's monthly usage limit",
+    "SessionID": "b44ac387-bc82-46cf-99e3-219d4a201fe7"
+  },
+  {
+    "Timestamp": "2026-05-04T10:51:43Z",
+    "Classification": "hard_limit",
+    "MatchedPattern": "usage limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "You've hit your org's monthly usage limit",
+    "SessionID": "b7e5a47e-7511-4f6c-935c-01ae7c867997"
+  },
+  {
+    "Timestamp": "2026-05-04T10:51:43Z",
+    "Classification": "hard_limit",
+    "MatchedPattern": "usage limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "You've hit your org's monthly usage limit",
+    "SessionID": "c57134bd-e235-4fc7-bac9-a45773fa8366"
+  },
+  {
+    "Timestamp": "2026-05-04T10:51:43Z",
+    "Classification": "hard_limit",
+    "MatchedPattern": "usage limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "You've hit your org's monthly usage limit",
+    "SessionID": "ea3d6f83-c382-4ecd-9d9a-1b6b9d514b10"
+  },
+  {
+    "Timestamp": "2026-05-04T10:51:43Z",
+    "Classification": "hard_limit",
+    "MatchedPattern": "usage limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "You've hit your org's monthly usage limit",
+    "SessionID": "ef4332b6-57c4-4693-a89e-4ec5480468f4"
+  },
+  {
+    "Timestamp": "2026-05-04T10:51:44Z",
+    "Classification": "hard_limit",
+    "MatchedPattern": "usage limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "You've hit your org's monthly usage limit",
+    "SessionID": "2d8070f1-9ce7-4d7e-9817-78d405732cce"
+  },
+  {
+    "Timestamp": "2026-05-04T10:51:44Z",
+    "Classification": "hard_limit",
+    "MatchedPattern": "usage limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "You've hit your org's monthly usage limit",
+    "SessionID": "70f44eaa-a557-4bad-b8ca-b72d83b11df6"
+  },
+  {
+    "Timestamp": "2026-05-04T10:51:44Z",
+    "Classification": "hard_limit",
+    "MatchedPattern": "usage limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "You've hit your org's monthly usage limit",
+    "SessionID": "7dfe7dc1-3dd3-4d90-ac0c-346ead0452ea"
+  },
+  {
+    "Timestamp": "2026-05-04T10:51:44Z",
+    "Classification": "hard_limit",
+    "MatchedPattern": "usage limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "You've hit your org's monthly usage limit",
+    "SessionID": "8af34be6-3338-498e-acb5-f363007b5e0b"
+  },
+  {
+    "Timestamp": "2026-05-04T10:51:44Z",
+    "Classification": "hard_limit",
+    "MatchedPattern": "usage limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "You've hit your org's monthly usage limit",
+    "SessionID": "a273ce65-f6da-42b7-b482-c43cdc667124"
+  },
+  {
+    "Timestamp": "2026-05-04T10:51:44Z",
+    "Classification": "hard_limit",
+    "MatchedPattern": "usage limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "You've hit your org's monthly usage limit",
+    "SessionID": "e2bd418a-bfce-46e7-ae09-afd3875b6a6f"
+  },
+  {
+    "Timestamp": "2026-05-04T10:51:44Z",
+    "Classification": "hard_limit",
+    "MatchedPattern": "usage limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "You've hit your org's monthly usage limit",
+    "SessionID": "e34cd385-9ccd-4210-8bb8-d98fdf00420d"
+  },
+  {
+    "Timestamp": "2026-05-04T10:51:45Z",
+    "Classification": "hard_limit",
+    "MatchedPattern": "usage limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "You've hit your org's monthly usage limit",
+    "SessionID": "1f9ac95b-f938-4f38-9d0b-700461321a74"
+  },
+  {
+    "Timestamp": "2026-05-04T10:51:45Z",
+    "Classification": "hard_limit",
+    "MatchedPattern": "usage limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "You've hit your org's monthly usage limit",
+    "SessionID": "23f7c3e1-c870-4b43-a2a7-a6dbe8fac51e"
+  },
+  {
+    "Timestamp": "2026-05-04T10:51:45Z",
+    "Classification": "hard_limit",
+    "MatchedPattern": "usage limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "You've hit your org's monthly usage limit",
+    "SessionID": "241d0649-9010-4d91-92a1-18e7c2eecffd"
+  },
+  {
+    "Timestamp": "2026-05-04T10:51:45Z",
+    "Classification": "hard_limit",
+    "MatchedPattern": "usage limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "You've hit your org's monthly usage limit",
+    "SessionID": "4748b719-9256-4037-81de-c31a33767954"
+  },
+  {
+    "Timestamp": "2026-05-04T10:51:45Z",
+    "Classification": "hard_limit",
+    "MatchedPattern": "usage limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "You've hit your org's monthly usage limit",
+    "SessionID": "88d00895-da89-4cd5-8bf3-ac796069bce6"
+  },
+  {
+    "Timestamp": "2026-05-04T10:51:45Z",
+    "Classification": "hard_limit",
+    "MatchedPattern": "usage limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "You've hit your org's monthly usage limit",
+    "SessionID": "b765322c-026b-4323-ab52-4f5fae4f9e81"
+  },
+  {
+    "Timestamp": "2026-05-04T10:51:45Z",
+    "Classification": "hard_limit",
+    "MatchedPattern": "usage limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "You've hit your org's monthly usage limit",
+    "SessionID": "df90a4e7-e5b4-4bcb-bcfd-6ea6e8fa13f7"
+  },
+  {
+    "Timestamp": "2026-05-04T10:51:45Z",
+    "Classification": "hard_limit",
+    "MatchedPattern": "usage limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "You've hit your org's monthly usage limit",
+    "SessionID": "fe2cd8df-d326-44d4-a777-5ea00cb83f75"
+  },
+  {
+    "Timestamp": "2026-05-04T11:27:58Z",
+    "Classification": "hard_limit",
+    "MatchedPattern": "usage limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "You've hit your org's monthly usage limit",
+    "SessionID": "d7a9b486-0457-451b-b81b-a50df343a8fa"
+  },
+  {
+    "Timestamp": "2026-05-04T11:28:16Z",
+    "Classification": "hard_limit",
+    "MatchedPattern": "usage limit",
+    "Confidence": 1,
+    "RedactedExcerpt": "You've hit your org's monthly usage limit",
+    "SessionID": "6773417f-81bc-4e72-aed9-eb57b3d9a586"
+  },
+  {
+    "Timestamp": "2026-05-04T18:05:07Z",
+    "Classification": "temporary_capacity",
+    "MatchedPattern": "overloaded",
+    "Confidence": 0.6,
+    "RedactedExcerpt": "```json\n{\n  \"headline\": \"Repeated attempts to use hydrate-distill command revealed a memory system overloaded with redundant recordings of the same systematic investigation preference, creating 345 in…",
+    "SessionID": "6e57436a-3c8e-420a-b773-a7aeab46b097"
+  }
+]

@@ -1,0 +1,63 @@
+patterns:
+  - pattern: "usage limit"
+    classification: hard_limit
+    confidence: 1.0
+  - pattern: "rate limit"
+    classification: rate_limit
+    confidence: 1.0
+  - pattern: "limit reached"
+    classification: hard_limit
+    confidence: 1.0
+  - pattern: "message limit"
+    classification: hard_limit
+    confidence: 1.0
+  - pattern: "quota exceeded"
+    classification: quota_limit
+    confidence: 1.0
+  - pattern: "too many requests"
+    classification: rate_limit
+    confidence: 0.9
+  - pattern: "try again later"
+    classification: rate_limit
+    confidence: 0.8
+  - pattern: "try again in"
+    classification: rate_limit
+    confidence: 0.8
+  - pattern: "come back later"
+    classification: hard_limit
+    confidence: 0.8
+  - pattern: "you have reached your"
+    classification: hard_limit
+    confidence: 0.9
+  - pattern: "maximum usage"
+    classification: hard_limit
+    confidence: 0.9
+  - pattern: "claude usage limit reached"
+    classification: hard_limit
+    confidence: 1.0
+  - pattern: "claude code usage limit reached"
+    classification: hard_limit
+    confidence: 1.0
+  - pattern: "overloaded"
+    classification: temporary_capacity
+    confidence: 0.6
+  - pattern: "temporarily unavailable"
+    classification: temporary_capacity
+    confidence: 0.6
+  - pattern: "capacity"
+    classification: temporary_capacity
+    confidence: 0.4
+
+system_error_codes:
+  - status: 429
+    classification: rate_limit
+    confidence: 1.0
+  - error_type: "rate_limit_error"
+    classification: rate_limit
+    confidence: 1.0
+  - error_type: "overloaded_error"
+    classification: temporary_capacity
+    confidence: 0.8
+  - error_type: "authentication_error"
+    classification: unknown_limit
+    confidence: 0.3

@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Claude Code Usage Report — {{.ProjectName}}</title>
+<style>{{.CSS}}</style>
+</head>
+<body>
+<header>
+  <h1>Claude Code Usage Report</h1>
+  <p>Project: {{.ProjectName}} &nbsp;·&nbsp; Generated: {{.GeneratedAt}}</p>
+</header>
+<main>
+
+  <div class="cards">
+    <div class="card">
+      <div class="label">Sessions</div>
+      <div class="value">{{.Summary.SessionCount}}</div>
+    </div>
+    <div class="card">
+      <div class="label">User messages</div>
+      <div class="value">{{.Summary.UserMessages}}</div>
+    </div>
+    <div class="card">
+      <div class="label">Assistant messages</div>
+      <div class="value">{{.Summary.AssistantMessages}}</div>
+    </div>
+    <div class="card">
+      <div class="label">Tool calls</div>
+      <div class="value">{{.Summary.ToolCalls}}</div>
+    </div>
+    <div class="card">
+      <div class="label">Known tokens</div>
+      <div class="value">{{.Summary.KnownTokensFmt}}</div>
+    </div>
+    <div class="card">
+      <div class="label">Est. tokens</div>
+      <div class="value est">{{.Summary.EstimatedTokensFmt}}</div>
+      <div class="note">Estimated (chars/4)</div>
+    </div>
+    <div class="card {{if gt .Summary.LimitEvents 0}}warn{{end}}">
+      <div class="label">Limit events</div>
+      <div class="value">{{.Summary.LimitEvents}}</div>
+    </div>
+    <div class="card">
+      <div class="label">Active days</div>
+      <div class="value">{{.Summary.ActiveDays}}</div>
+    </div>
+  </div>
+
+  <div class="chart-section">
+    <h2>Usage Over Time</h2>
+    <div class="chart-wrap"><canvas id="chartUsage"></canvas></div>
+  </div>
+
+  <div class="chart-section">
+    <h2>Limit Events Over Time</h2>
+    <div class="chart-wrap"><canvas id="chartLimits"></canvas></div>
+  </div>
+
+  <div class="chart-section">
+    <h2>Sessions Per Day</h2>
+    <div class="chart-wrap"><canvas id="chartSessions"></canvas></div>
+  </div>
+
+  <div class="chart-section">
+    <h2>Sessions</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Started</th><th>Duration</th><th>User msgs</th>
+          <th>Asst msgs</th><th>Tool calls</th><th>Tokens</th><th>Limits</th>
+        </tr>
+      </thead>
+      <tbody id="sessionsBody"></tbody>
+    </table>
+  </div>
+
+  <div class="chart-section">
+    <h2>Detected Limit Events</h2>
+    <p style="font-size:0.8rem;color:#888">
+      Detected using configurable text patterns and HTTP error codes.
+      May include false positives. Confidence shown as percentage.
+    </p>
+    <table>
+      <thead>
+        <tr>
+          <th>Timestamp</th><th>Classification</th><th>Pattern</th>
+          <th>Confidence</th><th>Excerpt</th>
+        </tr>
+      </thead>
+      <tbody id="limitEventsBody"></tbody>
+    </table>
+  </div>
+
+</main>
+<footer>
+  Claude Code Usage Analyser &nbsp;·&nbsp;
+  All processing is local. No data was transmitted externally. &nbsp;·&nbsp;
+  Token counts marked <em>est.</em> are estimated (characters ÷ 4) where exact usage metadata was unavailable.
+</footer>
+
+<script>
+window.__CUA_DATA__ = {{.DataJSON}};
+</script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<script>{{.AppJS}}</script>
+</body>
+</html>

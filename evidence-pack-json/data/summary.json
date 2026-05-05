@@ -1,0 +1,12 @@
+{
+  "session_count": 19047,
+  "active_days": 50,
+  "user_messages": 70822,
+  "assistant_messages": 57338,
+  "tool_calls": 47434,
+  "known_total_tokens": 26777320,
+  "estimated_total_tokens": 103360719,
+  "limit_events": 256,
+  "first_session_at": "2026-03-10T08:00:00Z",
+  "last_session_at": "2026-05-04T23:22:41Z"
+}
