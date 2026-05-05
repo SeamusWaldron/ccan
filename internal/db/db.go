@@ -89,10 +89,11 @@ func (d *DB) UpsertSession(s *SessionRow) (int64, error) {
 			tool_call_count, tool_result_count,
 			known_input_tokens, known_output_tokens, known_total_tokens,
 			estimated_input_tokens, estimated_output_tokens, estimated_total_tokens,
+			cache_creation_tokens, cache_read_tokens,
 			limit_event_count, first_limit_event_at, ended_after_limit_event,
 			parse_error_count, created_at, updated_at
 		) VALUES (
-			?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP
+			?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP
 		)
 		ON CONFLICT(source_file) DO UPDATE SET
 			session_id               = excluded.session_id,
@@ -110,6 +111,8 @@ func (d *DB) UpsertSession(s *SessionRow) (int64, error) {
 			estimated_input_tokens   = excluded.estimated_input_tokens,
 			estimated_output_tokens  = excluded.estimated_output_tokens,
 			estimated_total_tokens   = excluded.estimated_total_tokens,
+			cache_creation_tokens    = excluded.cache_creation_tokens,
+			cache_read_tokens        = excluded.cache_read_tokens,
 			limit_event_count        = excluded.limit_event_count,
 			first_limit_event_at     = excluded.first_limit_event_at,
 			ended_after_limit_event  = excluded.ended_after_limit_event,
@@ -121,6 +124,7 @@ func (d *DB) UpsertSession(s *SessionRow) (int64, error) {
 		s.ToolCallCount, s.ToolResultCount,
 		s.KnownInputTokens, s.KnownOutputTokens, s.KnownTotalTokens,
 		s.EstimatedInputTokens, s.EstimatedOutputTokens, s.EstimatedTotalTokens,
+		s.CacheCreationTokens, s.CacheReadTokens,
 		s.LimitEventCount, s.FirstLimitEventAt, s.EndedAfterLimitEvent,
 		s.ParseErrorCount,
 	)
@@ -142,13 +146,14 @@ func (d *DB) InsertEvent(e *EventRow) error {
 	_, err := d.Exec(`
 		INSERT INTO events (
 			project_id, session_db_id, session_id, source_file, line_number,
-			timestamp, event_type, role, message_type, tool_name,
+			timestamp, event_type, role, message_type, tool_name, tool_input_summary,
 			char_count, estimated_tokens, known_input_tokens, known_output_tokens, known_total_tokens,
-			created_at
-		) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP)`,
+			cache_creation_tokens, cache_read_tokens, created_at
+		) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP)`,
 		e.ProjectID, e.SessionDBID, e.SessionID, e.SourceFile, e.LineNumber,
-		e.Timestamp, e.EventType, e.Role, e.MessageType, e.ToolName,
+		e.Timestamp, e.EventType, e.Role, e.MessageType, e.ToolName, e.ToolInputSummary,
 		e.CharCount, e.EstimatedTokens, e.KnownInputTokens, e.KnownOutputTokens, e.KnownTotalTokens,
+		e.CacheCreationTokens, e.CacheReadTokens,
 	)
 	return err
 }
@@ -214,6 +219,8 @@ type SessionRow struct {
 	EstimatedInputTokens  int64
 	EstimatedOutputTokens int64
 	EstimatedTotalTokens  int64
+	CacheCreationTokens   int64
+	CacheReadTokens       int64
 	LimitEventCount       int
 	FirstLimitEventAt     string
 	EndedAfterLimitEvent  bool
@@ -221,21 +228,24 @@ type SessionRow struct {
 }
 
 type EventRow struct {
-	ProjectID        int64
-	SessionDBID      int64
-	SessionID        string
-	SourceFile       string
-	LineNumber       int
-	Timestamp        string
-	EventType        string
-	Role             string
-	MessageType      string
-	ToolName         string
-	CharCount        int
-	EstimatedTokens  int
-	KnownInputTokens int64
-	KnownOutputTokens int64
-	KnownTotalTokens int64
+	ProjectID           int64
+	SessionDBID         int64
+	SessionID           string
+	SourceFile          string
+	LineNumber          int
+	Timestamp           string
+	EventType           string
+	Role                string
+	MessageType         string
+	ToolName            string
+	ToolInputSummary    string
+	CharCount           int
+	EstimatedTokens     int
+	KnownInputTokens    int64
+	KnownOutputTokens   int64
+	KnownTotalTokens    int64
+	CacheCreationTokens int64
+	CacheReadTokens     int64
 }
 
 type LimitEventRow struct {

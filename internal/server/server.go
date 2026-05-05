@@ -318,24 +318,42 @@ func (s *Server) handleProjects(w http.ResponseWriter, r *http.Request) {
 
 // ── sessions ──────────────────────────────────────────────────────────────────
 
+// Claude Sonnet pricing ($/million tokens) — used for cost estimates.
+const (
+	priceSonnetInputPerMTok  = 3.00
+	priceSonnetOutputPerMTok = 15.00
+	priceCacheReadPerMTok    = 0.30
+	priceCacheWritePerMTok   = 3.75
+)
+
+func estimateCostUSD(inputTok, outputTok, cacheRead, cacheWrite int64) float64 {
+	return float64(inputTok)/1e6*priceSonnetInputPerMTok +
+		float64(outputTok)/1e6*priceSonnetOutputPerMTok +
+		float64(cacheRead)/1e6*priceCacheReadPerMTok +
+		float64(cacheWrite)/1e6*priceCacheWritePerMTok
+}
+
 type sessionRow struct {
-	ID                    int64  `json:"id"`
-	SessionID             string `json:"session_id"`
-	ProjectID             int64  `json:"project_id"`
-	ProjectPath           string `json:"project_path,omitempty"`
-	StartedAt             string `json:"started_at"`
-	EndedAt               string `json:"ended_at"`
-	DurationSeconds       int64  `json:"duration_seconds"`
-	UserMessageCount      int    `json:"user_message_count"`
-	AssistantMessageCount int    `json:"assistant_message_count"`
-	ToolCallCount         int    `json:"tool_call_count"`
-	KnownInputTokens      int64  `json:"known_input_tokens"`
-	KnownOutputTokens     int64  `json:"known_output_tokens"`
-	KnownTotalTokens      int64  `json:"known_total_tokens"`
-	EstimatedTotalTokens  int64  `json:"estimated_total_tokens"`
-	LimitEventCount       int    `json:"limit_event_count"`
-	FirstLimitEventAt     string `json:"first_limit_event_at"`
-	EndedAfterLimitEvent  bool   `json:"ended_after_limit_event"`
+	ID                    int64   `json:"id"`
+	SessionID             string  `json:"session_id"`
+	ProjectID             int64   `json:"project_id"`
+	ProjectPath           string  `json:"project_path,omitempty"`
+	StartedAt             string  `json:"started_at"`
+	EndedAt               string  `json:"ended_at"`
+	DurationSeconds       int64   `json:"duration_seconds"`
+	UserMessageCount      int     `json:"user_message_count"`
+	AssistantMessageCount int     `json:"assistant_message_count"`
+	ToolCallCount         int     `json:"tool_call_count"`
+	KnownInputTokens      int64   `json:"known_input_tokens"`
+	KnownOutputTokens     int64   `json:"known_output_tokens"`
+	KnownTotalTokens      int64   `json:"known_total_tokens"`
+	EstimatedTotalTokens  int64   `json:"estimated_total_tokens"`
+	CacheCreationTokens   int64   `json:"cache_creation_tokens"`
+	CacheReadTokens       int64   `json:"cache_read_tokens"`
+	EstimatedCostUSD      float64 `json:"estimated_cost_usd"`
+	LimitEventCount       int     `json:"limit_event_count"`
+	FirstLimitEventAt     string  `json:"first_limit_event_at"`
+	EndedAfterLimitEvent  bool    `json:"ended_after_limit_event"`
 }
 
 type sessionsListResponse struct {
@@ -415,6 +433,7 @@ func (s *Server) handleSessions(w http.ResponseWriter, r *http.Request) {
 		        COALESCE(s.started_at,''), COALESCE(s.ended_at,''), COALESCE(s.duration_seconds,0),
 		        s.user_message_count, s.assistant_message_count, s.tool_call_count,
 		        s.known_input_tokens, s.known_output_tokens, s.known_total_tokens, s.estimated_total_tokens,
+		        COALESCE(s.cache_creation_tokens,0), COALESCE(s.cache_read_tokens,0),
 		        s.limit_event_count, COALESCE(s.first_limit_event_at,''), s.ended_after_limit_event
 		 FROM sessions s LEFT JOIN projects p ON p.id=s.project_id
 		 WHERE `+where+` ORDER BY `+sortCol+` `+sortDir+` LIMIT ? OFFSET ?`,
@@ -433,11 +452,13 @@ func (s *Server) handleSessions(w http.ResponseWriter, r *http.Request) {
 			&sr.StartedAt, &sr.EndedAt, &sr.DurationSeconds,
 			&sr.UserMessageCount, &sr.AssistantMessageCount, &sr.ToolCallCount,
 			&sr.KnownInputTokens, &sr.KnownOutputTokens, &sr.KnownTotalTokens, &sr.EstimatedTotalTokens,
+			&sr.CacheCreationTokens, &sr.CacheReadTokens,
 			&sr.LimitEventCount, &sr.FirstLimitEventAt, &sr.EndedAfterLimitEvent,
 		); err != nil {
 			jsonErr(w, err)
 			return
 		}
+		sr.EstimatedCostUSD = estimateCostUSD(sr.KnownInputTokens, sr.KnownOutputTokens, sr.CacheReadTokens, sr.CacheCreationTokens)
 		result = append(result, sr)
 	}
 	if result == nil {
@@ -594,6 +615,7 @@ func (s *Server) handleProjectDetail(w http.ResponseWriter, r *http.Request) {
 		       COALESCE(started_at,''), COALESCE(ended_at,''), COALESCE(duration_seconds,0),
 		       user_message_count, assistant_message_count, tool_call_count,
 		       known_input_tokens, known_output_tokens, known_total_tokens, estimated_total_tokens,
+		       COALESCE(cache_creation_tokens,0), COALESCE(cache_read_tokens,0),
 		       limit_event_count, COALESCE(first_limit_event_at,''), ended_after_limit_event
 		FROM sessions
 		WHERE project_id = ? AND (? = '' OR started_at >= ?) AND (? = '' OR started_at <= ?)
@@ -612,11 +634,13 @@ func (s *Server) handleProjectDetail(w http.ResponseWriter, r *http.Request) {
 			&r.StartedAt, &r.EndedAt, &r.DurationSeconds,
 			&r.UserMessageCount, &r.AssistantMessageCount, &r.ToolCallCount,
 			&r.KnownInputTokens, &r.KnownOutputTokens, &r.KnownTotalTokens, &r.EstimatedTotalTokens,
+			&r.CacheCreationTokens, &r.CacheReadTokens,
 			&r.LimitEventCount, &r.FirstLimitEventAt, &r.EndedAfterLimitEvent,
 		); err != nil {
 			jsonErr(w, err)
 			return
 		}
+		r.EstimatedCostUSD = estimateCostUSD(r.KnownInputTokens, r.KnownOutputTokens, r.CacheReadTokens, r.CacheCreationTokens)
 		sessions = append(sessions, r)
 	}
 
@@ -664,23 +688,144 @@ func (s *Server) handleProjectPage(w http.ResponseWriter, r *http.Request) {
 // ── session detail ────────────────────────────────────────────────────────────
 
 type eventRow struct {
-	ID                int64  `json:"id"`
-	Timestamp         string `json:"timestamp"`
-	EventType         string `json:"event_type"`
-	Role              string `json:"role"`
-	MessageType       string `json:"message_type"`
-	ToolName          string `json:"tool_name"`
-	CharCount         int    `json:"char_count"`
-	EstimatedTokens   int64  `json:"estimated_tokens"`
-	KnownInputTokens  int64  `json:"known_input_tokens"`
-	KnownOutputTokens int64  `json:"known_output_tokens"`
-	KnownTotalTokens  int64  `json:"known_total_tokens"`
+	ID                  int64  `json:"id"`
+	Timestamp           string `json:"timestamp"`
+	EventType           string `json:"event_type"`
+	Role                string `json:"role"`
+	MessageType         string `json:"message_type"`
+	ToolName            string `json:"tool_name"`
+	ToolInputSummary    string `json:"tool_input_summary"`
+	CharCount           int    `json:"char_count"`
+	EstimatedTokens     int64  `json:"estimated_tokens"`
+	KnownInputTokens    int64  `json:"known_input_tokens"`
+	KnownOutputTokens   int64  `json:"known_output_tokens"`
+	KnownTotalTokens    int64  `json:"known_total_tokens"`
+	CacheCreationTokens int64  `json:"cache_creation_tokens"`
+	CacheReadTokens     int64  `json:"cache_read_tokens"`
+}
+
+type toolBreakdown struct {
+	ToolName  string `json:"tool_name"`
+	CallCount int    `json:"call_count"`
+}
+
+type fileOpRow struct {
+	ToolName  string `json:"tool_name"`
+	FilePath  string `json:"file_path"`
+	CallCount int    `json:"call_count"`
+	IsReRead  bool   `json:"is_re_read"`
+}
+
+type sessionFinding struct {
+	Severity string `json:"severity"` // "warning" | "info"
+	Code     string `json:"code"`
+	Message  string `json:"message"`
+}
+
+func computeFindings(sess sessionRow) []sessionFinding {
+	var findings []sessionFinding
+
+	if sess.LimitEventCount > 0 {
+		findings = append(findings, sessionFinding{
+			Severity: "warning",
+			Code:     "limit_hit",
+			Message:  fmt.Sprintf("Session hit %d context limit event(s)", sess.LimitEventCount),
+		})
+	}
+
+	if sess.KnownInputTokens > 150000 {
+		findings = append(findings, sessionFinding{
+			Severity: "warning",
+			Code:     "context_pressure",
+			Message:  fmt.Sprintf("High context pressure: %s input tokens (>150k)", fmtTok(sess.KnownInputTokens)),
+		})
+	} else if sess.KnownInputTokens > 80000 {
+		findings = append(findings, sessionFinding{
+			Severity: "info",
+			Code:     "context_pressure",
+			Message:  fmt.Sprintf("Moderate context pressure: %s input tokens (>80k)", fmtTok(sess.KnownInputTokens)),
+		})
+	}
+
+	totalCache := sess.CacheCreationTokens + sess.CacheReadTokens
+	if totalCache > 0 {
+		hitRate := float64(sess.CacheReadTokens) / float64(totalCache)
+		if hitRate >= 0.5 {
+			findings = append(findings, sessionFinding{
+				Severity: "info",
+				Code:     "cache_efficient",
+				Message:  fmt.Sprintf("Good cache utilization: %.0f%% hit rate (%s read tokens)", hitRate*100, fmtTok(sess.CacheReadTokens)),
+			})
+		}
+	} else if sess.KnownInputTokens > 10000 {
+		findings = append(findings, sessionFinding{
+			Severity: "info",
+			Code:     "no_cache",
+			Message:  "No cache tokens detected — prompt caching could reduce costs for long sessions",
+		})
+	}
+
+	if sess.UserMessageCount > 0 && sess.ToolCallCount > 0 {
+		ratio := float64(sess.ToolCallCount) / float64(sess.UserMessageCount)
+		if ratio > 10 {
+			findings = append(findings, sessionFinding{
+				Severity: "info",
+				Code:     "high_tool_intensity",
+				Message:  fmt.Sprintf("High tool intensity: %.1f tool calls per user message", ratio),
+			})
+		}
+	}
+
+	return findings
+}
+
+func computeEfficiencyScore(findings []sessionFinding, cacheRead, cacheCreate int64) int {
+	score := 100
+	for _, f := range findings {
+		switch f.Code {
+		case "limit_hit":
+			score -= 25
+		case "context_pressure":
+			if f.Severity == "warning" {
+				score -= 20
+			} else {
+				score -= 10
+			}
+		}
+	}
+	totalCache := cacheRead + cacheCreate
+	if totalCache > 0 {
+		if float64(cacheRead)/float64(totalCache) >= 0.5 {
+			score += 10
+		}
+	}
+	if score < 0 {
+		score = 0
+	}
+	if score > 100 {
+		score = 100
+	}
+	return score
+}
+
+func fmtTok(n int64) string {
+	if n >= 1000000 {
+		return fmt.Sprintf("%.1fM", float64(n)/1000000)
+	}
+	if n >= 1000 {
+		return fmt.Sprintf("%.1fk", float64(n)/1000)
+	}
+	return fmt.Sprintf("%d", n)
 }
 
 type sessionDetailResponse struct {
-	Session     sessionRow      `json:"session"`
-	Events      []eventRow      `json:"events"`
-	LimitEvents []limitEventRow `json:"limit_events"`
+	Session         sessionRow       `json:"session"`
+	Events          []eventRow       `json:"events"`
+	LimitEvents     []limitEventRow  `json:"limit_events"`
+	ToolBreakdown   []toolBreakdown  `json:"tool_breakdown"`
+	FileOps         []fileOpRow      `json:"file_ops"`
+	Findings        []sessionFinding `json:"findings"`
+	EfficiencyScore int              `json:"efficiency_score"`
 }
 
 func (s *Server) handleSessionDetail(w http.ResponseWriter, r *http.Request) {
@@ -702,12 +847,14 @@ func (s *Server) handleSessionDetail(w http.ResponseWriter, r *http.Request) {
 			       COALESCE(started_at,''), COALESCE(ended_at,''), COALESCE(duration_seconds,0),
 			       user_message_count, assistant_message_count, tool_call_count,
 			       known_input_tokens, known_output_tokens, known_total_tokens, estimated_total_tokens,
+			       COALESCE(cache_creation_tokens,0), COALESCE(cache_read_tokens,0),
 			       limit_event_count, COALESCE(first_limit_event_at,''), ended_after_limit_event
 			FROM sessions WHERE id = ?`, id).Scan(
 			&sess.ID, &sess.SessionID, &sess.ProjectID,
 			&sess.StartedAt, &sess.EndedAt, &sess.DurationSeconds,
 			&sess.UserMessageCount, &sess.AssistantMessageCount, &sess.ToolCallCount,
 			&sess.KnownInputTokens, &sess.KnownOutputTokens, &sess.KnownTotalTokens, &sess.EstimatedTotalTokens,
+			&sess.CacheCreationTokens, &sess.CacheReadTokens,
 			&sess.LimitEventCount, &sess.FirstLimitEventAt, &sess.EndedAfterLimitEvent,
 		)
 	} else if sidStr != "" {
@@ -716,12 +863,14 @@ func (s *Server) handleSessionDetail(w http.ResponseWriter, r *http.Request) {
 			       COALESCE(started_at,''), COALESCE(ended_at,''), COALESCE(duration_seconds,0),
 			       user_message_count, assistant_message_count, tool_call_count,
 			       known_input_tokens, known_output_tokens, known_total_tokens, estimated_total_tokens,
+			       COALESCE(cache_creation_tokens,0), COALESCE(cache_read_tokens,0),
 			       limit_event_count, COALESCE(first_limit_event_at,''), ended_after_limit_event
 			FROM sessions WHERE session_id = ?`, sidStr).Scan(
 			&sess.ID, &sess.SessionID, &sess.ProjectID,
 			&sess.StartedAt, &sess.EndedAt, &sess.DurationSeconds,
 			&sess.UserMessageCount, &sess.AssistantMessageCount, &sess.ToolCallCount,
 			&sess.KnownInputTokens, &sess.KnownOutputTokens, &sess.KnownTotalTokens, &sess.EstimatedTotalTokens,
+			&sess.CacheCreationTokens, &sess.CacheReadTokens,
 			&sess.LimitEventCount, &sess.FirstLimitEventAt, &sess.EndedAfterLimitEvent,
 		)
 	} else {
@@ -734,12 +883,14 @@ func (s *Server) handleSessionDetail(w http.ResponseWriter, r *http.Request) {
 		jsonErr(w, err)
 		return
 	}
+	sess.EstimatedCostUSD = estimateCostUSD(sess.KnownInputTokens, sess.KnownOutputTokens, sess.CacheReadTokens, sess.CacheCreationTokens)
 
 	evRows, err := s.db.Query(`
 		SELECT id, COALESCE(timestamp,''), event_type, COALESCE(role,''),
-		       COALESCE(message_type,''), COALESCE(tool_name,''),
+		       COALESCE(message_type,''), COALESCE(tool_name,''), COALESCE(tool_input_summary,''),
 		       char_count, estimated_tokens,
-		       known_input_tokens, known_output_tokens, known_total_tokens
+		       known_input_tokens, known_output_tokens, known_total_tokens,
+		       COALESCE(cache_creation_tokens,0), COALESCE(cache_read_tokens,0)
 		FROM events
 		WHERE session_db_id = ?
 		ORDER BY line_number ASC`, sess.ID)
@@ -753,9 +904,10 @@ func (s *Server) handleSessionDetail(w http.ResponseWriter, r *http.Request) {
 		var ev eventRow
 		if err := evRows.Scan(
 			&ev.ID, &ev.Timestamp, &ev.EventType, &ev.Role,
-			&ev.MessageType, &ev.ToolName,
+			&ev.MessageType, &ev.ToolName, &ev.ToolInputSummary,
 			&ev.CharCount, &ev.EstimatedTokens,
 			&ev.KnownInputTokens, &ev.KnownOutputTokens, &ev.KnownTotalTokens,
+			&ev.CacheCreationTokens, &ev.CacheReadTokens,
 		); err != nil {
 			jsonErr(w, err)
 			return
@@ -787,7 +939,61 @@ func (s *Server) handleSessionDetail(w http.ResponseWriter, r *http.Request) {
 		limits = append(limits, le)
 	}
 
-	jsonOK(w, sessionDetailResponse{Session: sess, Events: events, LimitEvents: limits})
+	// Tool breakdown: call counts per tool
+	tbRows, err := s.db.Query(`
+		SELECT COALESCE(tool_name,'') as tn, COUNT(*) as calls
+		FROM events
+		WHERE session_db_id = ? AND tool_name != ''
+		GROUP BY tn ORDER BY calls DESC`, sess.ID)
+	if err != nil {
+		jsonErr(w, err)
+		return
+	}
+	defer tbRows.Close()
+	var toolBreaks []toolBreakdown
+	for tbRows.Next() {
+		var tb toolBreakdown
+		if err := tbRows.Scan(&tb.ToolName, &tb.CallCount); err != nil {
+			jsonErr(w, err)
+			return
+		}
+		toolBreaks = append(toolBreaks, tb)
+	}
+
+	// File ops: group by tool + input summary, flag re-reads (count > 1 for Read)
+	foRows, err := s.db.Query(`
+		SELECT COALESCE(tool_name,'') as tn, COALESCE(tool_input_summary,'') as fp, COUNT(*) as calls
+		FROM events
+		WHERE session_db_id = ? AND tool_input_summary != ''
+		GROUP BY tn, fp ORDER BY calls DESC LIMIT 200`, sess.ID)
+	if err != nil {
+		jsonErr(w, err)
+		return
+	}
+	defer foRows.Close()
+	var fileOps []fileOpRow
+	for foRows.Next() {
+		var fo fileOpRow
+		if err := foRows.Scan(&fo.ToolName, &fo.FilePath, &fo.CallCount); err != nil {
+			jsonErr(w, err)
+			return
+		}
+		fo.IsReRead = fo.ToolName == "Read" && fo.CallCount > 1
+		fileOps = append(fileOps, fo)
+	}
+
+	findings := computeFindings(sess)
+	effScore := computeEfficiencyScore(findings, sess.CacheReadTokens, sess.CacheCreationTokens)
+
+	jsonOK(w, sessionDetailResponse{
+		Session:         sess,
+		Events:          events,
+		LimitEvents:     limits,
+		ToolBreakdown:   toolBreaks,
+		FileOps:         fileOps,
+		Findings:        findings,
+		EfficiencyScore: effScore,
+	})
 }
 
 func (s *Server) handleSessionPage(w http.ResponseWriter, r *http.Request) {
@@ -982,6 +1188,7 @@ func (s *Server) handleDayDetail(w http.ResponseWriter, r *http.Request) {
 		        COALESCE(started_at,''), COALESCE(ended_at,''), COALESCE(duration_seconds,0),
 		        user_message_count, assistant_message_count, tool_call_count,
 		        known_input_tokens, known_output_tokens, known_total_tokens, estimated_total_tokens,
+		        COALESCE(cache_creation_tokens,0), COALESCE(cache_read_tokens,0),
 		        limit_event_count, COALESCE(first_limit_event_at,''), ended_after_limit_event
 		 FROM sessions WHERE `+sessWhere+` ORDER BY started_at ASC`,
 		sessArgs...,
@@ -999,11 +1206,13 @@ func (s *Server) handleDayDetail(w http.ResponseWriter, r *http.Request) {
 			&sr.StartedAt, &sr.EndedAt, &sr.DurationSeconds,
 			&sr.UserMessageCount, &sr.AssistantMessageCount, &sr.ToolCallCount,
 			&sr.KnownInputTokens, &sr.KnownOutputTokens, &sr.KnownTotalTokens, &sr.EstimatedTotalTokens,
+			&sr.CacheCreationTokens, &sr.CacheReadTokens,
 			&sr.LimitEventCount, &sr.FirstLimitEventAt, &sr.EndedAfterLimitEvent,
 		); err != nil {
 			jsonErr(w, err)
 			return
 		}
+		sr.EstimatedCostUSD = estimateCostUSD(sr.KnownInputTokens, sr.KnownOutputTokens, sr.CacheReadTokens, sr.CacheCreationTokens)
 		sessions = append(sessions, sr)
 	}
 

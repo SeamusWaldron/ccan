@@ -78,12 +78,13 @@ type ParsedEntry struct {
 	IsSidechain   bool
 	Entrypoint    string
 	// counts
-	IsUserMessage  bool
-	IsToolResult   bool
-	IsAssistant    bool
-	IsSystem       bool
-	ToolCalls      []string // tool names
-	CharCount      int
+	IsUserMessage      bool
+	IsToolResult       bool
+	IsAssistant        bool
+	IsSystem           bool
+	ToolCalls          []string // tool names
+	ToolInputSummaries []string // parallel to ToolCalls — file path, command, URL, etc.
+	CharCount          int
 	// tokens (only set if message.usage was present)
 	HasTokenUsage  bool
 	InputTokens    int

@@ -149,6 +149,7 @@ func parseAssistantEntry(entry *RawEntry, parsed *ParsedEntry, raw []byte, seenM
 				parsed.CharCount += len(b.Thinking)
 			case "tool_use":
 				parsed.ToolCalls = append(parsed.ToolCalls, b.Name)
+				parsed.ToolInputSummaries = append(parsed.ToolInputSummaries, extractToolInputSummary(b.Name, b.Input))
 				parsed.CharCount += len(b.Input)
 			}
 		}
@@ -178,6 +179,67 @@ func parseSystemEntry(entry *RawEntry, parsed *ParsedEntry, raw []byte) {
 	parsed.APIErrorType = apiErr.Error.Type
 	parsed.APIErrorMsg = apiErr.Error.Message
 	parsed.TextContent = strings.Join([]string{apiErr.Error.Type, apiErr.Error.Message}, " ")
+}
+
+// extractToolInputSummary returns a short human-readable summary of a tool's primary input.
+func extractToolInputSummary(toolName string, input json.RawMessage) string {
+	if len(input) == 0 {
+		return ""
+	}
+	switch toolName {
+	case "Read", "Write", "Edit", "MultiEdit", "NotebookEdit", "Glob", "LS":
+		var v struct {
+			FilePath string `json:"file_path"`
+			Path     string `json:"path"`
+			Notebook string `json:"notebook_path"`
+		}
+		if json.Unmarshal(input, &v) == nil {
+			if v.FilePath != "" {
+				return v.FilePath
+			}
+			if v.Notebook != "" {
+				return v.Notebook
+			}
+			if v.Path != "" {
+				return v.Path
+			}
+		}
+	case "Bash":
+		var v struct {
+			Command string `json:"command"`
+		}
+		if json.Unmarshal(input, &v) == nil && v.Command != "" {
+			if len(v.Command) > 120 {
+				return v.Command[:120] + "…"
+			}
+			return v.Command
+		}
+	case "WebFetch":
+		var v struct {
+			URL string `json:"url"`
+		}
+		if json.Unmarshal(input, &v) == nil {
+			return v.URL
+		}
+	case "WebSearch":
+		var v struct {
+			Query string `json:"query"`
+		}
+		if json.Unmarshal(input, &v) == nil {
+			return v.Query
+		}
+	case "Task", "dispatch_agent":
+		var v struct {
+			Description string `json:"description"`
+		}
+		if json.Unmarshal(input, &v) == nil && v.Description != "" {
+			if len(v.Description) > 100 {
+				return v.Description[:100] + "…"
+			}
+			return v.Description
+		}
+	}
+	return ""
 }
 
 func detectLimits(parsed *ParsedEntry, patterns *LimitPatternFile, threshold float64) {

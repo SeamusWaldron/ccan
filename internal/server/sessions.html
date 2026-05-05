@@ -129,6 +129,7 @@ footer{text-align:center;padding:1.5rem;font-size:.7rem;color:#bbb}
           <th class="sortable" data-col="tool_call_count">Tools <span class="sort-icon"></span></th>
           <th class="sortable" data-col="known_total_tokens">Tokens <span class="sort-icon"></span></th>
           <th class="sortable" data-col="limit_event_count">Limits <span class="sort-icon"></span></th>
+          <th>Cost</th>
           <th>Project</th>
         </tr>
       </thead>
@@ -163,6 +164,7 @@ function fmtTok(sr){
   if(sr.estimated_total_tokens>0)return`<span class="est">~${fmtNum(sr.estimated_total_tokens)}</span>`;
   return'—';
 }
+function fmtCost(c){if(!c||c<0.0001)return'<span style="color:#ccc">—</span>';return'$'+c.toFixed(4);}
 function fmtTime(s){return s?s.slice(0,19).replace('T',' '):'—'}
 function fmtShortTime(s){return s?s.slice(11,19):'—'}
 
@@ -265,8 +267,9 @@ function renderList(){
     <td class="num">${s.tool_call_count||0}</td>
     <td>${fmtTok(s)}</td>
     <td>${s.limit_event_count>0?`<span class="tag hard_limit">${s.limit_event_count}</span>`:'—'}</td>
+    <td class="num" style="font-size:.75rem">${fmtCost(s.estimated_cost_usd)}</td>
     <td class="project-cell" title="${esc(s.project_path)}">${esc(s.project_path||'—')}</td>
-  </tr>`).join('')||`<tr><td colspan="8" class="no-data">No sessions found.</td></tr>`;
+  </tr>`).join('')||`<tr><td colspan="9" class="no-data">No sessions found.</td></tr>`;
 
   // pagination
   const pg=qs('pagination');
@@ -365,6 +368,7 @@ function renderChunks(sessions){
       <td class="num">${s.tool_call_count||0}</td>
       <td>${fmtTok(s)}</td>
       <td>${s.limit_event_count>0?`<span class="tag hard_limit">${s.limit_event_count}</span>`:'—'}</td>
+      <td class="num" style="font-size:.75rem">${fmtCost(s.estimated_cost_usd)}</td>
       <td class="project-cell" title="${esc(s.project_path)}">${esc(s.project_path||'—')}</td>
     </tr>`).join('');
 
@@ -382,7 +386,7 @@ function renderChunks(sessions){
       <div class="chunk-sessions" id="chunk${bi}">
         <table style="margin:0;border-radius:0;box-shadow:none">
           <thead><tr>
-            <th>Started</th><th>Duration</th><th>User</th><th>Asst</th><th>Tools</th><th>Tokens</th><th>Limits</th><th>Project</th>
+            <th>Started</th><th>Duration</th><th>User</th><th>Asst</th><th>Tools</th><th>Tokens</th><th>Limits</th><th>Cost</th><th>Project</th>
           </tr></thead>
           <tbody>${rows}</tbody>
         </table>

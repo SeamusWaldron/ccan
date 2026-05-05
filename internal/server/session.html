@@ -8,7 +8,7 @@
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box}
-:root{--fn:'JetBrains Mono',ui-monospace,'SF Mono','Fira Code',monospace;--red:#ef4444;--red-bg:rgba(239,68,68,.05)}
+:root{--fn:'JetBrains Mono',ui-monospace,'SF Mono','Fira Code',monospace;--red:#ef4444;--red-bg:rgba(239,68,68,.05);--green:#22c55e;--amber:#f59e0b}
 body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#f5f5f5;color:#222}
 header{background:#1a1a2e;color:#eee;padding:1rem 2rem;display:flex;justify-content:space-between;align-items:flex-start}
 header>div:first-child{flex:1}
@@ -23,6 +23,10 @@ main{max-width:1200px;margin:1.5rem auto;padding:0 1.5rem}
 .card .value{font-size:1.4rem;font-weight:700;font-family:var(--fn)}
 .card.warn{border-left:3px solid var(--red)}
 .card.warn .value{color:var(--red)}
+.card.good{border-left:3px solid var(--green)}
+.card.good .value{color:#16a34a}
+.card.amber{border-left:3px solid var(--amber)}
+.card.amber .value{color:#b45309}
 .card .note{font-size:.65rem;color:#aaa;margin-top:.2rem}
 .num{font-family:var(--fn)}
 .limit-row td{background:var(--red-bg)!important;box-shadow:inset 3px 0 0 var(--red)}
@@ -52,6 +56,21 @@ th{background:#f9f9f9;font-weight:600;color:#555;white-space:nowrap}
 .chart-wrap{position:relative;height:200px;margin-bottom:1rem}
 footer{text-align:center;padding:1.5rem;font-size:.7rem;color:#bbb}
 .highlight-row td{background:#fff9c4!important}
+/* findings */
+.findings-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:.5rem}
+.finding{display:flex;gap:.75rem;align-items:flex-start;padding:.6rem .75rem;border-radius:6px;font-size:.82rem}
+.finding.warning{background:#fef2f2;border-left:3px solid var(--red);color:#7f1d1d}
+.finding.info{background:#eff6ff;border-left:3px solid #3b82f6;color:#1e3a5f}
+.finding .icon{font-size:1rem;flex-shrink:0}
+/* tool breakdown */
+.tb-bar-wrap{display:flex;align-items:center;gap:.6rem;font-size:.8rem}
+.tb-bar{height:8px;background:#3b82f6;border-radius:4px;min-width:2px}
+/* file ops */
+.re-read td{color:var(--red)!important}
+.re-read td:first-child::before{content:'↻ ';opacity:.7}
+/* two-col layout */
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-bottom:1.5rem}
+@media(max-width:700px){.two-col{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -72,16 +91,51 @@ footer{text-align:center;padding:1.5rem;font-size:.7rem;color:#bbb}
     <div class="card"><div class="label">Loading…</div><div class="value">—</div></div>
   </div>
 
+  <!-- Findings -->
+  <div class="section" id="findingsSection" style="display:none">
+    <h2>Findings <span class="badge" id="findingsCount">0</span></h2>
+    <ul class="findings-list" id="findingsList"></ul>
+  </div>
+
   <div class="section">
     <h2>Session Info</h2>
     <dl class="meta-grid" id="metaGrid"></dl>
   </div>
 
-  <div class="section">
-    <h2>Activity Timeline <span class="badge" id="eventCount">0</span></h2>
-    <div class="chart-wrap"><canvas id="chartActivity"></canvas></div>
+  <!-- Activity Timeline + Context Window side by side -->
+  <div class="two-col">
+    <div class="section" style="margin-bottom:0">
+      <h2>Activity Timeline <span class="badge" id="eventCount">0</span></h2>
+      <div class="chart-wrap"><canvas id="chartActivity"></canvas></div>
+    </div>
+    <div class="section" style="margin-bottom:0">
+      <h2>Context Window Growth</h2>
+      <div class="chart-wrap"><canvas id="chartContext"></canvas></div>
+    </div>
+  </div>
+
+  <!-- Tool Breakdown + File Operations side by side -->
+  <div class="two-col" style="margin-top:1.5rem" id="toolFileSection">
+    <div class="section" style="margin-bottom:0" id="toolBreakdownSection" style="display:none">
+      <h2>Tool Breakdown <span class="badge" id="toolCount">0</span></h2>
+      <table id="toolTable">
+        <thead><tr><th>Tool</th><th>Calls</th><th>Share</th></tr></thead>
+        <tbody id="toolBody"></tbody>
+      </table>
+    </div>
+    <div class="section" style="margin-bottom:0" id="fileOpsSection" style="display:none">
+      <h2>File Operations <span class="badge" id="fileOpsCount">0</span></h2>
+      <table id="fileOpsTable">
+        <thead><tr><th>Tool</th><th>Path / Command</th><th>×</th></tr></thead>
+        <tbody id="fileOpsBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="section" style="margin-top:1.5rem">
+    <h2>Event Log <span class="badge" id="eventCountTable">0</span></h2>
     <table>
-      <thead><tr><th>#</th><th>Timestamp</th><th>Role / Type</th><th>Tool</th><th>Chars</th><th>Tokens</th></tr></thead>
+      <thead><tr><th>#</th><th>Time</th><th>Role / Type</th><th>Tool</th><th>Input</th><th>Chars</th><th>Tokens</th></tr></thead>
       <tbody id="eventsBody"></tbody>
     </table>
   </div>
@@ -102,6 +156,8 @@ function qs(id){return document.getElementById(id)}
 function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
 function fmtDur(s){if(!s)return'—';const m=Math.floor(s/60),sec=s%60;return m>0?m+'m '+sec+'s':sec+'s'}
 function fmtNum(n){return(n||0).toLocaleString()}
+function fmtCost(c){if(!c||c<0.0001)return'<$0.01';return'$'+c.toFixed(4)}
+function scoreClass(s){return s>=80?'good':s>=60?'amber':'warn'}
 
 function getParams(){
   const p=new URLSearchParams(window.location.search);
@@ -127,61 +183,113 @@ async function load(){
   const sess=data.session;
   const events=data.events||[];
   const limits=data.limit_events||[];
+  const findings=data.findings||[];
+  const toolBreakdown=data.tool_breakdown||[];
+  const fileOps=data.file_ops||[];
+  const effScore=data.efficiency_score??100;
 
-  // Back link — use explicit back param if present, otherwise fall back to project page
+  // Back link
   qs('backLink').href=back||(sess.project_id?`/project?id=${sess.project_id}`:`/`);
-
   qs('sessionMeta').textContent=`Started: ${sess.started_at?sess.started_at.slice(0,19).replace('T',' '):'unknown'} · Duration: ${fmtDur(sess.duration_seconds)}`;
 
-  // Cards
+  // ── Cards
   qs('cards').innerHTML=[
-    ['User messages',sess.user_message_count,''],
-    ['Asst messages',sess.assistant_message_count,''],
-    ['Tool calls',sess.tool_call_count,''],
-    ['Known tokens',fmtNum(sess.known_total_tokens),''],
-    ['Est. tokens',sess.estimated_total_tokens?`<span class="est">~${fmtNum(sess.estimated_total_tokens)}</span>`:'—','Estimated (chars/4)'],
-    ['Duration',fmtDur(sess.duration_seconds),''],
+    ['User msgs',sess.user_message_count,'',''],
+    ['Asst msgs',sess.assistant_message_count,'',''],
+    ['Tool calls',sess.tool_call_count,'',''],
+    ['Known tokens',fmtNum(sess.known_total_tokens),'',''],
+    ['Cache read',fmtNum(sess.cache_read_tokens),'',''],
+    ['Est. cost',fmtCost(sess.estimated_cost_usd),'Sonnet pricing',''],
     ['Limit events',sess.limit_event_count,'',sess.limit_event_count>0?'warn':''],
-  ].map(([l,v,n,cls])=>`<div class="card ${cls||''}"><div class="label">${l}</div><div class="value">${v}</div>${n?`<div class="note">${n}</div>`:''}</div>`).join('');
+    ['Efficiency',effScore+'/100','',scoreClass(effScore)],
+  ].map(([l,v,n,cls])=>`<div class="card ${cls}"><div class="label">${l}</div><div class="value">${v}</div>${n?`<div class="note">${n}</div>`:''}</div>`).join('');
 
-  // Meta grid
+  // ── Findings
+  if(findings.length>0){
+    qs('findingsSection').style.display='';
+    qs('findingsCount').textContent=findings.length;
+    qs('findingsList').innerHTML=findings.map(f=>{
+      const icon=f.severity==='warning'?'⚠':'ℹ';
+      return`<li class="finding ${f.severity}"><span class="icon">${icon}</span><span>${esc(f.message)}</span></li>`;
+    }).join('');
+  }
+
+  // ── Meta grid
   qs('metaGrid').innerHTML=[
     ['Session ID', esc(sess.session_id||'—')],
     ['Started', sess.started_at?sess.started_at.slice(0,19).replace('T',' '):'—'],
     ['Ended', sess.ended_at?sess.ended_at.slice(0,19).replace('T',' '):'—'],
     ['Duration', fmtDur(sess.duration_seconds)],
-    ['Known tokens (in/out)', sess.known_total_tokens>0?`${fmtNum(sess.known_input_tokens||0)} / ${fmtNum(sess.known_output_tokens||0)}`:'—'],
+    ['Input / Output tokens', sess.known_total_tokens>0?`${fmtNum(sess.known_input_tokens||0)} / ${fmtNum(sess.known_output_tokens||0)}`:'—'],
+    ['Cache write / read', `${fmtNum(sess.cache_creation_tokens||0)} / ${fmtNum(sess.cache_read_tokens||0)}`],
+    ['Estimated cost', fmtCost(sess.estimated_cost_usd)],
     ['Ended after limit', sess.ended_after_limit_event?'Yes':'No'],
     ['First limit at', sess.first_limit_event_at?sess.first_limit_event_at.slice(0,19).replace('T',' '):'—'],
   ].map(([k,v])=>`<div><dt>${k}</dt><dd>${v}</dd></div>`).join('');
 
-  // Limit banner
+  // ── Limit banner
   if(limits.length>0){
     qs('limitBanner').style.display='';
     qs('limitBannerDetail').textContent=`${limits.length} limit event${limits.length>1?'s':''} detected. First at ${limits[0].timestamp?limits[0].timestamp.slice(0,19).replace('T',' '):'unknown'}.`;
   }
 
-  // Activity chart — group events by minute
+  // ── Charts
   renderActivityChart(events, limits);
+  renderContextChart(events);
 
-  // Events table
+  // ── Tool breakdown
+  if(toolBreakdown.length>0){
+    qs('toolBreakdownSection').style.display='';
+    qs('toolCount').textContent=toolBreakdown.length;
+    const maxCalls=toolBreakdown[0]?.call_count||1;
+    const totalCalls=toolBreakdown.reduce((s,t)=>s+t.call_count,0);
+    qs('toolBody').innerHTML=toolBreakdown.map(t=>{
+      const pct=Math.round((t.call_count/totalCalls)*100);
+      const barW=Math.round((t.call_count/maxCalls)*120);
+      return`<tr>
+        <td><span class="num">${esc(t.tool_name)}</span></td>
+        <td class="num">${fmtNum(t.call_count)}</td>
+        <td><div class="tb-bar-wrap"><div class="tb-bar" style="width:${barW}px"></div><span style="color:#888">${pct}%</span></div></td>
+      </tr>`;
+    }).join('');
+  }
+
+  // ── File operations
+  if(fileOps.length>0){
+    qs('fileOpsSection').style.display='';
+    qs('fileOpsCount').textContent=fileOps.length;
+    qs('fileOpsBody').innerHTML=fileOps.map(fo=>{
+      const cls=fo.is_re_read?'re-read':'';
+      const pathDisp=fo.file_path.length>50?'…'+fo.file_path.slice(-48):fo.file_path;
+      return`<tr class="${cls}">
+        <td><span class="tag tool_call">${esc(fo.tool_name)}</span></td>
+        <td title="${esc(fo.file_path)}" style="font-family:var(--fn);font-size:.75rem;word-break:break-all">${esc(pathDisp)}</td>
+        <td class="num">${fo.call_count}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  // ── Event log
   qs('eventCount').textContent=events.length;
+  qs('eventCountTable').textContent=events.length;
   const limitTimestamps=new Set(limits.map(l=>l.timestamp));
   qs('eventsBody').innerHTML=events.map((ev,i)=>{
     const isLimitTime=limitTimestamps.has(ev.timestamp);
     const roleTag=ev.role?`<span class="tag ${ev.role}">${ev.role}</span>`:`<span class="tag ${ev.event_type}">${ev.event_type}</span>`;
     const tok=ev.known_total_tokens>0?fmtNum(ev.known_total_tokens):(ev.estimated_tokens>0?`<span class="est">~${fmtNum(ev.estimated_tokens)}</span>`:'—');
-    return`<tr${isLimitTime||highlight==='limit'&&isLimitTime?' class="highlight-row"':''}>
+    const inputDisp=ev.tool_input_summary?(ev.tool_input_summary.length>40?'…'+ev.tool_input_summary.slice(-38):ev.tool_input_summary):'';
+    return`<tr class="${isLimitTime?'limit-row':''}">
       <td style="color:#aaa">${i+1}</td>
       <td style="white-space:nowrap;color:#888;font-size:.75rem">${ev.timestamp?ev.timestamp.slice(11,19):'—'}</td>
       <td>${roleTag}${ev.message_type?` <span style="color:#aaa;font-size:.7rem">${esc(ev.message_type)}</span>`:''}</td>
       <td style="color:#666">${ev.tool_name?esc(ev.tool_name):'—'}</td>
+      <td title="${esc(ev.tool_input_summary)}" style="color:#888;font-family:var(--fn);font-size:.72rem;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(inputDisp)}</td>
       <td style="color:#888">${ev.char_count>0?fmtNum(ev.char_count):'—'}</td>
       <td>${tok}</td>
     </tr>`;
-  }).join('')||'<tr><td colspan="6" style="color:#aaa">No events recorded.</td></tr>';
+  }).join('')||'<tr><td colspan="7" style="color:#aaa">No events recorded.</td></tr>';
 
-  // Limits table
+  // ── Limits table
   if(limits.length>0){
     qs('limitsSection').style.display='';
     qs('limitCount').textContent=limits.length;
@@ -194,7 +302,6 @@ async function load(){
     </tr>`).join('');
   }
 
-  // Scroll to limits if that's the highlight
   if(highlight==='limit'&&limits.length>0){
     setTimeout(()=>qs('limitsSection').scrollIntoView({behavior:'smooth',block:'start'}),300);
   }
@@ -203,8 +310,6 @@ async function load(){
 function renderActivityChart(events, limits){
   const canvas=qs('chartActivity');
   if(!canvas||!events.length)return;
-
-  // Bucket events by minute
   const buckets={};
   for(const ev of events){
     if(!ev.timestamp)continue;
@@ -212,11 +317,9 @@ function renderActivityChart(events, limits){
     if(!buckets[min])buckets[min]={user:0,assistant:0,tool:0};
     if(ev.role==='user')buckets[min].user++;
     else if(ev.role==='assistant')buckets[min].assistant++;
-    else if(ev.event_type==='tool_call'||ev.event_type==='tool_result')buckets[min].tool++;
+    else if(ev.tool_name)buckets[min].tool++;
   }
   const labels=Object.keys(buckets).sort();
-  const limitMinutes=new Set((limits||[]).map(l=>l.timestamp?l.timestamp.slice(0,16):null).filter(Boolean));
-
   new Chart(canvas,{
     type:'bar',
     data:{
@@ -229,11 +332,41 @@ function renderActivityChart(events, limits){
     },
     options:{
       responsive:true,maintainAspectRatio:false,
-      plugins:{
-        legend:{position:'top'},
-        annotation:{annotations:labels.map((l,i)=>limitMinutes.has(l)?{type:'line',xMin:i-.5,xMax:i+.5,borderColor:'rgba(220,38,38,.8)',borderWidth:2,borderDash:[4,2]}:null).filter(Boolean)},
-      },
+      plugins:{legend:{position:'top'}},
       scales:{x:{stacked:true},y:{stacked:true,beginAtZero:true,ticks:{precision:0}}}
+    }
+  });
+}
+
+function renderContextChart(events){
+  const canvas=qs('chartContext');
+  if(!canvas)return;
+  // Plot input_tokens per assistant message (non-zero known_input_tokens) to show context growth
+  const points=events.filter(ev=>ev.known_input_tokens>0);
+  if(points.length<2){
+    canvas.parentElement.innerHTML='<p style="color:#bbb;font-size:.8rem;text-align:center;padding:3rem 0">Not enough token data for context timeline.</p>';
+    return;
+  }
+  new Chart(canvas,{
+    type:'line',
+    data:{
+      labels:points.map((_,i)=>`Turn ${i+1}`),
+      datasets:[{
+        label:'Input tokens (context size)',
+        data:points.map(ev=>ev.known_input_tokens),
+        borderColor:'rgba(99,102,241,.8)',
+        backgroundColor:'rgba(99,102,241,.1)',
+        fill:true,
+        tension:.3,
+        pointRadius:3,
+      }]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'top'}},
+      scales:{
+        y:{beginAtZero:true,ticks:{callback:v=>v>=1000?(v/1000).toFixed(0)+'k':v}}
+      }
     }
   });
 }

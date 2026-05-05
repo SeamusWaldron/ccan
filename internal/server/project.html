@@ -104,7 +104,7 @@ footer{text-align:center;padding:1.5rem;font-size:.7rem;color:#bbb}
   <div class="chart-section">
     <h2>Sessions</h2>
     <table>
-      <thead><tr><th>Started</th><th>Duration</th><th>User</th><th>Asst</th><th>Tools</th><th>Tokens</th><th>Limits</th></tr></thead>
+      <thead><tr><th>Started</th><th>Duration</th><th>User</th><th>Asst</th><th>Tools</th><th>Tokens</th><th>Limits</th><th>Cost</th></tr></thead>
       <tbody id="sessionsBody"></tbody>
     </table>
   </div>
@@ -131,6 +131,7 @@ function fmtTok(s){
   if(s.estimated_total_tokens>0)return`<span class="est">~${fmtNum(s.estimated_total_tokens)}</span>`;
   return '—';
 }
+function fmtCost(c){if(!c||c<0.0001)return'<span style="color:#ccc">—</span>';return'$'+c.toFixed(4);}
 
 function getProjectID(){
   const p=new URLSearchParams(window.location.search);
@@ -269,8 +270,9 @@ function renderSessions(sessions){
       <td class="num">${s.tool_call_count}</td>
       <td>${s.known_total_tokens>0?`<span class="num">${fmtNum(s.known_total_tokens)}</span><div class="bar-wrap"><div class="bar-fill" style="width:${pct}%"></div></div>`:fmtTok(s)}</td>
       <td>${hasLim?'<span class="tag hard_limit">'+s.limit_event_count+'</span>':'—'}</td>
+      <td class="num" style="font-size:.75rem">${fmtCost(s.estimated_cost_usd)}</td>
     </tr>`;
-  }).join('')||'<tr><td colspan="7" style="color:#aaa">No sessions.</td></tr>';
+  }).join('')||'<tr><td colspan="8" style="color:#aaa">No sessions.</td></tr>';
 }
 
 function renderLimits(limits){

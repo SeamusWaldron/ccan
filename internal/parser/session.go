@@ -59,6 +59,8 @@ func BuildSessionRow(r *ParseResult, projectID int64, charsPerTok int) *db.Sessi
 		if e.HasTokenUsage {
 			row.KnownInputTokens += int64(e.InputTokens)
 			row.KnownOutputTokens += int64(e.OutputTokens)
+			row.CacheCreationTokens += int64(e.CacheCreate)
+			row.CacheReadTokens += int64(e.CacheRead)
 		} else if e.CharCount > 0 {
 			row.EstimatedInputTokens += int64(EstimateTokens(e.CharCount, charsPerTok))
 		}
@@ -142,7 +144,7 @@ func BuildEventRows(r *ParseResult, projectID, sessionDBID int64, charsPerTok in
 			toolName = e.ToolCalls[0]
 		}
 
-		var knownIn, knownOut, knownTotal int64
+		var knownIn, knownOut, knownTotal, cacheCreate, cacheRead int64
 		if e.HasTokenUsage && !seenMsgIDs[e.MessageID] {
 			if e.MessageID != "" {
 				seenMsgIDs[e.MessageID] = true
@@ -150,6 +152,8 @@ func BuildEventRows(r *ParseResult, projectID, sessionDBID int64, charsPerTok in
 			knownIn = int64(e.InputTokens)
 			knownOut = int64(e.OutputTokens)
 			knownTotal = knownIn + knownOut
+			cacheCreate = int64(e.CacheCreate)
+			cacheRead = int64(e.CacheRead)
 		}
 
 		est := 0
@@ -157,28 +161,44 @@ func BuildEventRows(r *ParseResult, projectID, sessionDBID int64, charsPerTok in
 			est = EstimateTokens(e.CharCount, charsPerTok)
 		}
 
+		toolInputSummary := ""
+		if len(e.ToolInputSummaries) > 0 {
+			toolInputSummary = e.ToolInputSummaries[0]
+		}
+
 		rows = append(rows, &db.EventRow{
-			ProjectID:         projectID,
-			SessionDBID:       sessionDBID,
-			SessionID:         e.SessionID,
-			SourceFile:        r.SourceFile,
-			LineNumber:        e.LineNumber,
-			Timestamp:         ts,
-			EventType:         e.Type,
-			Role:              e.Role,
-			MessageType:       msgType,
-			ToolName:          toolName,
-			CharCount:         e.CharCount,
-			EstimatedTokens:   est,
-			KnownInputTokens:  knownIn,
-			KnownOutputTokens: knownOut,
-			KnownTotalTokens:  knownTotal,
+			ProjectID:           projectID,
+			SessionDBID:         sessionDBID,
+			SessionID:           e.SessionID,
+			SourceFile:          r.SourceFile,
+			LineNumber:          e.LineNumber,
+			Timestamp:           ts,
+			EventType:           e.Type,
+			Role:                e.Role,
+			MessageType:         msgType,
+			ToolName:            toolName,
+			ToolInputSummary:    toolInputSummary,
+			CharCount:           e.CharCount,
+			EstimatedTokens:     est,
+			KnownInputTokens:    knownIn,
+			KnownOutputTokens:   knownOut,
+			KnownTotalTokens:    knownTotal,
+			CacheCreationTokens: cacheCreate,
+			CacheReadTokens:     cacheRead,
 		})
 
 		// one row per tool call for multi-tool entries
 		for i := 1; i < len(e.ToolCalls); i++ {
 			extra := *rows[len(rows)-1]
 			extra.ToolName = e.ToolCalls[i]
+			if i < len(e.ToolInputSummaries) {
+				extra.ToolInputSummary = e.ToolInputSummaries[i]
+			} else {
+				extra.ToolInputSummary = ""
+			}
+			// cache tokens only on the first event row per message
+			extra.CacheCreationTokens = 0
+			extra.CacheReadTokens = 0
 			rows = append(rows, &extra)
 		}
 	}
